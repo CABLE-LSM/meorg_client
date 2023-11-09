@@ -30,7 +30,7 @@ class Client:
             self.login(email, password)
 
 
-    def _make_request(self, method: str, endpoint: str, data: dict=None, headers: dict=None) -> dict:
+    def _make_request(self, method: str, endpoint: str, data: dict=None, headers: dict=None) -> Union[dict, requests.Response]:
         """Make the request
 
         Parameters
@@ -46,7 +46,7 @@ class Client:
 
         Returns
         -------
-        dict or request.Response
+        dict or requests.Response
             Decoded JSON response, or raw response.
 
         Raises
@@ -122,7 +122,7 @@ class Client:
             raise Exception("Login failed")
 
 
-    def get_file_status(self, file_id: str) -> dict:
+    def get_file_status(self, file_id: str) -> Union[dict, requests.Response]:
         """Get the file status.
 
         Parameters
@@ -177,7 +177,7 @@ class Client:
         )
 
 
-    def start_analysis(self, model_output_id: str) -> dict:
+    def start_analysis(self, model_output_id: str) -> Union[dict, requests.Response]:
         """Start the analysis chain.
 
         Parameters
@@ -197,7 +197,7 @@ class Client:
         )
     
 
-    def get_model_output_status(self, analysis_id: str) -> dict:
+    def get_model_output_status(self, analysis_id: str) -> Union[dict, requests.Response]:
         """Check the status of the analysis chain.
 
         Parameters
@@ -217,7 +217,7 @@ class Client:
         )
 
 
-    def list_endpoints(self) -> dict:
+    def list_endpoints(self) -> Union[dict, requests.Response]:
         """List the endpoints available to the user.
 
         Paths are available at .get('paths').keys()
