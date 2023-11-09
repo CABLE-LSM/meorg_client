@@ -157,7 +157,7 @@ class Client:
         return self._make_request('post', endpoint='logout')
     
 
-    def get_model_outputs(self, model_output_id):
+    def get_model_outputs(self, model_output_id: str) -> Union[dict, requests.Response]:
         """Get a list of model outputs.
 
         Parameters
