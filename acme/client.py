@@ -3,6 +3,7 @@ import requests
 import hashlib as hl
 import json
 import os
+from typing import Union
 
 VALID_METHODS = ['POST', 'GET', 'DELETE', 'PUT']
 
