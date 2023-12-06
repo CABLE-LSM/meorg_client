@@ -109,10 +109,10 @@ class Client:
         response = self._make_request('post', endpoint='login', data=login_data)
 
         # Successful login
-        if response.get('status', 'error') == 'success':
+        if response.status_code == 200:
             auth_headers = {
-                'X-User-Id': response['data']['userId'],
-                'X-Auth-Token': response['data']['authToken']
+                'X-User-Id': response.json()['userId'],
+                'X-Auth-Token': response.json()['authToken']
             }
 
             self.headers.update(auth_headers)
@@ -121,6 +121,22 @@ class Client:
         else:
 
             raise Exception("Login failed")
+
+
+    def logout(self):
+        """Log the user out. Likely not necessary, can just let sessions expire.
+
+        Returns
+        -------
+        dict or requests.Response
+            Response from ME.org.
+        """
+        response = self._make_request('post', endpoint='logout')
+        
+        # Clear the headers.
+        self.headers = dict()
+
+        return response
 
 
     def get_file_status(self, file_id: str) -> Union[dict, requests.Response]:
@@ -145,17 +161,6 @@ class Client:
 
     def upload_file(self, file_path):
         raise NotImplementedError()
-
-
-    def logout(self):
-        """Log the user out. Likely not necessary, can just let sessions expire.
-
-        Returns
-        -------
-        dict or requests.Response
-            Response from ME.org.
-        """
-        return self._make_request('post', endpoint='logout')
     
 
     def get_model_outputs(self, model_output_id: str) -> Union[dict, requests.Response]:
@@ -193,7 +198,7 @@ class Client:
         """
         return self._make_request(
             method='put',
-            endpoint='modeloutput/{model_output_id}/start'
+            endpoint=f'modeloutput/{model_output_id}/start',
             data=dict(model_output_id=model_output_id)
         )
     
