@@ -1,0 +1,577 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Modelevaluation REST endpoints",
+        "version": "2.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:3000/api",
+            "description": "Local server"
+        },
+        {
+            "url": "https://ncitest.modelevaluation.org/api",
+            "description": "Test server"
+        },
+        {
+            "url": "https://modelevaluation.org/api",
+            "description": "Production server"
+        }
+    ],
+    "paths": {
+        "/login": {
+            "post": {
+                "description": "Get authentication API keys. Email and password supplied as a plain string. eg. github.com/meteor-compat/meteor-restivus/tree/master",
+                "tags": [
+                    "Authentication"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "description": "Account email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "description": "Account password"
+                                    }
+                                }
+                            },
+                            "encoding": {
+                                "explode": false
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "authToken": {
+                                                    "type": "string"
+                                                },
+                                                "userId": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "post": {
+                "description": "Invalidate API keys",
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/files": {
+            "post": {
+                "description": "Upload files to the object store. Size limit per file of 5GB, per request of 12 GB.",
+                "tags": [
+                    "Utilities"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "file",
+                                "format": "binary"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "File has been received by server, and queued for upload to the object store",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "jobId": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    }
+                }
+            }
+        },
+        "/files/status/{id}": {
+            "get": {
+                "description": "Get details on a files upload job. Only user who initiated the upload will be able to use this endpoint.",
+                "tags": [
+                    "Utilities"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "jobId of files upload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "description": null,
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "description": "When value is \"complete\", files exist on server - not necessarily uploaded to object store"
+                                                },
+                                                "files": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "fileId": {
+                                                                "type": "string",
+                                                                "description": "ID of file in database"
+                                                            },
+                                                            "filename": {
+                                                                "type": "string",
+                                                                "description": "name of file that was uploaded"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            }
+        },
+        "/modeloutput/{id}/files": {
+            "get": {
+                "description": "Get list of file IDs associated with modeloutput",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "Modeloutput id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "description": "file ID",
+                                                "example": "me5pq77uhy4bjR78R"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            },
+            "patch": {
+                "description": "Replace the model output files list. Role requirement - owner or 'delete any model output'",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "Modeloutput id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "array",
+                                "items": {
+                                    "file": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "description": "file ID",
+                                                "example": "me5pq77uhy4bjR78R"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            }
+        },
+        "/modeloutput/{id}/start": {
+            "put": {
+                "description": "Start analysis for given modeloutputs",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "Modeloutput id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "analysisId": {
+                                                    "type": "string",
+                                                    "description": "Analysis ID",
+                                                    "example": "me5pq77uhy4bjR78R"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            }
+        },
+        "/modeloutput/{id}/status": {
+            "get": {
+                "description": "Get progress of an analysis. Only user who started the analysis can view status.",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "analysis ID"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "description": "Status of the analysis",
+                                                    "example": "uploading plots"
+                                                },
+                                                "url": {
+                                                    "type": "string",
+                                                    "description": "URL to plots",
+                                                    "example": "modelevaluation.org/path/to/plots"
+                                                },
+                                                "files": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "/path/to/plot"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "notFound": {
+            "description": "Resource does not exist",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "error"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "Requested resource cannot be found"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "unauthorisedResponse": {
+            "description": "User does not have required role",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "error"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "User does not have the required role"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "unauthenticated": {
+            "description": "Endpoint requires login",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "error"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "You must be logged in"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "authToken": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Auth-Token",
+                "description": "Token from login call"
+            },
+            "userId": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-User-Id",
+                "description": "User ID from login call"
+            }
+        }
+    },
+    "tags": []
+}

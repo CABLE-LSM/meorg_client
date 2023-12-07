@@ -1,4 +1,4 @@
-# API Client for ModelEvaluation.org (ACME)
+# API Client for ModelEvaluation.org (meorg_client)
 
 This is the repository for the Python client under development for interacting with the ME.org service.
 
@@ -6,7 +6,7 @@ This is the repository for the Python client under development for interacting w
 
 ```python
 # import the library
-from acme.client import Client
+from meorg_client.client import Client
 
 # Set some details
 base_url = 'https://modelevaluation.org/api'
