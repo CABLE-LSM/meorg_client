@@ -3,12 +3,37 @@ import pkgutil
 import json
 import yaml
 import os
+from pathlib import Path
+from importlib import resources
+
 
 # Single argument decoding functions.
 PACKAGE_DATA_DECODERS = dict(
     json=json.loads,
     yml=yaml.safe_load
 )
+
+
+def get_installed_root() -> Path:
+    """Get the installed root of the installation.
+
+    Returns
+    -------
+    Path
+        Path to the installed root.
+    """
+    return Path(resources.files("meorg_client"))
+
+
+def get_installed_data_root() -> Path:
+    """Get the installed data root of the installation.
+
+    Returns
+    -------
+    Path
+        Path to the installed data root.
+    """
+    return get_installed_root() / 'data'
 
 
 def load_package_data(filename: str) -> dict:
@@ -26,7 +51,7 @@ def load_package_data(filename: str) -> dict:
     ext = ext if ext != 'yaml' else 'yml'
 
     # Extract from the installations data directory.
-    raw = pkgutil.get_data('acme', os.path.join('data', filename)).decode('utf-8')
+    raw = pkgutil.get_data('meorg_client', os.path.join('data', filename)).decode('utf-8')
 
     # Decode and return.
     return PACKAGE_DATA_DECODERS[ext](raw)

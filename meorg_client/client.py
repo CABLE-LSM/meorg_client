@@ -64,13 +64,16 @@ class Client:
 
         # GET/PUT requests have the data interpolated into the url
         if method in ['GET', 'PUT']:
-            endpoint = endpoint.format(data)
+            endpoint = endpoint.format(**data)
+
+        # Remove the leading slash
+        endpoint = endpoint[1:] if endpoint[0] == '/' else endpoint
 
         url = f"{self.base_url}/{endpoint}"
         all_headers = {**self.headers, **headers} if headers else self.headers
         response = requests.request(method, url, data=data, headers=all_headers)
 
-        if response.status_code == 200:
+        if response.status_code in [200, 202]:
 
             # Return JSON if that's what it is (this should be the default)
             if response.headers.get('Content-Type', str) == 'application/json':
@@ -139,12 +142,12 @@ class Client:
         return response
 
 
-    def get_file_status(self, file_id: str) -> Union[dict, requests.Response]:
+    def get_file_status(self, id: str) -> Union[dict, requests.Response]:
         """Get the file status.
 
         Parameters
         ----------
-        file_id : str
+        id : str
             ID of the file.
 
         Returns
@@ -154,22 +157,38 @@ class Client:
         """
         return self._make_request(
             method='get',
-            endpoint='/files/status/{file_id}',
-            data=dict(file_id=file_id)
+            endpoint='/files/status/{id}',
+            data=dict(id=id)
         )
 
 
-    def upload_file(self, file_path):
-        raise NotImplementedError()
+    def upload_file(self, file_path: str) -> Union[dict, requests.Response]:
+        """Upload a file.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the file.
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method='post',
+            endpoint='files',
+            data=open(file_path, 'rb').read()         
+        )
     
 
-    def get_model_outputs(self, model_output_id: str) -> Union[dict, requests.Response]:
+    def list_files(self, id: str) -> Union[dict, requests.Response]:
         """Get a list of model outputs.
 
         Parameters
         ----------
-        model_output_id : str
-            Model output
+        id : str
+            Model output ID
 
         Returns
         -------
@@ -178,17 +197,17 @@ class Client:
         """
         return self._make_request(
             method='get',
-            endpoint='modeloutput/{model_output_id}/files',
-            data=dict(model_output_id=model_output_id)
+            endpoint='modeloutput/{id}/files',
+            data=dict(id=id)
         )
 
 
-    def start_analysis(self, model_output_id: str) -> Union[dict, requests.Response]:
+    def start_analysis(self, id: str) -> Union[dict, requests.Response]:
         """Start the analysis chain.
 
         Parameters
         ----------
-        model_output_id : str
+        id : str
             Model output ID.
 
         Returns
@@ -198,17 +217,17 @@ class Client:
         """
         return self._make_request(
             method='put',
-            endpoint=f'modeloutput/{model_output_id}/start',
-            data=dict(model_output_id=model_output_id)
+            endpoint=f'modeloutput/{id}/start',
+            data=dict(id=id)
         )
     
 
-    def get_model_output_status(self, analysis_id: str) -> Union[dict, requests.Response]:
+    def get_analysis_status(self, id: str) -> Union[dict, requests.Response]:
         """Check the status of the analysis chain.
 
         Parameters
         ----------
-        analysis_id : str
+        id : str
             Analysis ID.
 
         Returns
@@ -218,8 +237,8 @@ class Client:
         """
         return self._make_request(
             method='get',
-            endpoint='/modeloutput/{analysis_id}/status',
-            data=dict(analysis_id=analysis_id)
+            endpoint='/modeloutput/{id}/status',
+            data=dict(id=id)
         )
 
 
