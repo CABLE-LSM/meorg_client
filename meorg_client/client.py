@@ -7,6 +7,7 @@ from typing import Union
 from urllib.parse import urljoin
 from meorg_client.exceptions import RequestException
 import meorg_client.constants as mcc
+import meorg_client.endpoints as endpoints
 
 
 class Client:
@@ -90,7 +91,7 @@ class Client:
             # Return JSON if that's what it is (this should be the default)
             if (
                 self.last_response.headers.get("Content-Type", str)
-                == mcc.HTTP_CONTENT_TYPES["json"]
+                == mcc.HTTP_CONTENT_TYPE_JSON
                 and return_json == True
             ):
                 return self.last_response.json()
@@ -126,9 +127,7 @@ class Client:
         }
 
         # Call
-        response = self._make_request(
-            "post", endpoint=mcc.ENDPOINTS["login"], data=login_data
-        )
+        response = self._make_request("post", endpoint=endpoints.LOGIN, data=login_data)
 
         # Successful login
         if response.status_code == 200:
@@ -151,7 +150,7 @@ class Client:
         dict or requests.Response
             Response from ME.org.
         """
-        response = self._make_request("post", endpoint=mcc.ENDPOINTS["logout"])
+        response = self._make_request("post", endpoint=endpoints.LOGOUT)
 
         # Clear the headers.
         self.headers = dict()
@@ -171,9 +170,8 @@ class Client:
         dict or requests.Response
             Response from ME.org.
         """
-        print("GFS2 " + self.base_url)
         return self._make_request(
-            method="get", endpoint=mcc.ENDPOINTS["file_status"], data=dict(id=id)
+            method="get", endpoint=endpoints.FILE_STATUS, data=dict(id=id)
         )
 
     def upload_file(self, file_path: str) -> Union[dict, requests.Response]:
@@ -191,7 +189,7 @@ class Client:
         """
         return self._make_request(
             method="post",
-            endpoint=mcc.ENDPOINTS["file_upload"],
+            endpoint=endpoints.FILE_UPLOAD,
             data=open(file_path, "rb").read(),
         )
 
@@ -209,7 +207,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="get", endpoint=mcc.ENDPOINTS["file_list"], data=dict(id=id)
+            method="get", endpoint=endpoints.FILE_LIST, data=dict(id=id)
         )
 
     def start_analysis(self, id: str) -> Union[dict, requests.Response]:
@@ -226,7 +224,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="put", endpoint=mcc.ENDPOINTS["analysis_start"], data=dict(id=id)
+            method="put", endpoint=endpoints.ANALYSIS_START, data=dict(id=id)
         )
 
     def get_analysis_status(self, id: str) -> Union[dict, requests.Response]:
@@ -243,7 +241,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="get", endpoint=mcc.ENDPOINTS["analysis_status"], data=dict(id=id)
+            method="get", endpoint=endpoints.ANALYSIS_STATUS, data=dict(id=id)
         )
 
     def list_endpoints(self) -> Union[dict, requests.Response]:
@@ -257,6 +255,4 @@ class Client:
             Response from ME.org.
         """
 
-        return self._make_request(
-            method="get", endpoint=mcc.ENDPOINTS["endpoints_list"]
-        )
+        return self._make_request(method="get", endpoint=endpoints.ENDPOINT_LIST)

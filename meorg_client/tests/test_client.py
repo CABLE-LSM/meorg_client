@@ -4,37 +4,38 @@ from meorg_client.client import Client
 import pytest
 from meorg_client.utilities import load_package_data, get_installed_data_root
 import meorg_client.constants as mcc
+import meorg_client.endpoints as endpoints
 from urllib.parse import urljoin
 
-
+# For convenience
 BASE_URL = "http://example.com"
 STR_EXAMPLE = "abcdefg"
 
+# Canned requests
 REQUEST_EXAMPLES = {
-    mcc.ENDPOINTS["login"]: dict(email="user@example.com", password="123456"),
-    mcc.ENDPOINTS["logout"]: dict(),
-    mcc.ENDPOINTS["file_upload"]: b"binary",
-    mcc.ENDPOINTS["file_status"]: dict(id=STR_EXAMPLE),
-    mcc.ENDPOINTS["file_list"]: dict(id=STR_EXAMPLE),
-    mcc.ENDPOINTS["analysis_start"]: dict(id=STR_EXAMPLE),
-    mcc.ENDPOINTS["analysis_status"]: dict(id=STR_EXAMPLE),
+    endpoints.LOGIN: dict(email="user@example.com", password="123456"),
+    endpoints.LOGOUT: dict(),
+    endpoints.FILE_UPLOAD: b"binary",
+    endpoints.FILE_STATUS: dict(id=STR_EXAMPLE),
+    endpoints.FILE_LIST: dict(id=STR_EXAMPLE),
+    endpoints.ANALYSIS_START: dict(id=STR_EXAMPLE),
+    endpoints.ANALYSIS_STATUS: dict(id=STR_EXAMPLE),
 }
 
+# Canned responses
 RESPONSE_EXAMPLES = {
-    mcc.ENDPOINTS["login"]: dict(userId="user123", authToken="123456"),
-    mcc.ENDPOINTS["logout"]: dict(),
-    mcc.ENDPOINTS["file_upload"]: dict(status="success", data=dict(jobId=STR_EXAMPLE)),
-    mcc.ENDPOINTS["file_status"]: dict(
+    endpoints.LOGIN: dict(userId="user123", authToken="123456"),
+    endpoints.LOGOUT: dict(),
+    endpoints.FILE_UPLOAD: dict(status="success", data=dict(jobId=STR_EXAMPLE)),
+    endpoints.FILE_STATUS: dict(
         status="success",
         data=dict(
             status="complete", files=[dict(fileId="123456", filename=STR_EXAMPLE)]
         ),
     ),
-    mcc.ENDPOINTS["file_list"]: dict(status="success", data=[STR_EXAMPLE]),
-    mcc.ENDPOINTS["analysis_start"]: dict(
-        status="success", data=dict(analysisId=STR_EXAMPLE)
-    ),
-    mcc.ENDPOINTS["analysis_status"]: dict(
+    endpoints.FILE_LIST: dict(status="success", data=[STR_EXAMPLE]),
+    endpoints.ANALYSIS_START: dict(status="success", data=dict(analysisId=STR_EXAMPLE)),
+    endpoints.ANALYSIS_STATUS: dict(
         status="success",
         data=dict(status=STR_EXAMPLE, url=STR_EXAMPLE, files=[STR_EXAMPLE]),
     ),
@@ -79,8 +80,8 @@ def client():
 def test_login(client, mocker):
     """Test login."""
 
-    request = REQUEST_EXAMPLES[mcc.ENDPOINTS["login"]]
-    response = RESPONSE_EXAMPLES[mcc.ENDPOINTS["login"]]
+    request = REQUEST_EXAMPLES[endpoints.LOGIN]
+    response = RESPONSE_EXAMPLES[endpoints.LOGIN]
 
     with mocker as rm:
         client.login(**request)
@@ -93,7 +94,7 @@ def test_login(client, mocker):
 def test_logout(client, mocker):
     """Test logout."""
 
-    request = REQUEST_EXAMPLES[mcc.ENDPOINTS["login"]]
+    request = REQUEST_EXAMPLES[endpoints.LOGIN]
 
     with mocker as rm:
         client.login(**request)
@@ -107,11 +108,11 @@ def test_logout(client, mocker):
 def test_upload(client, mocker):
     """Test upload."""
 
-    # Just use the api spec as the file to upload, it doesn't matter
+    # Just use the api spec as the file to upload, it doesn't matter for testing.
     filepath = get_installed_data_root() / "openapi.json"
 
     with mocker as rm:
-        client.login(**REQUEST_EXAMPLES[mcc.ENDPOINTS["login"]])
+        client.login(**REQUEST_EXAMPLES[endpoints.LOGIN])
         response = client.upload_file(filepath)
         assert response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
 
@@ -120,10 +121,8 @@ def test_get_file_status(client, mocker):
     """Test get_file_status."""
 
     with mocker as rm:
-        client.login(**REQUEST_EXAMPLES[mcc.ENDPOINTS["login"]])
-        response = client.get_file_status(
-            **REQUEST_EXAMPLES[mcc.ENDPOINTS["file_status"]]
-        )
+        client.login(**REQUEST_EXAMPLES[endpoints.LOGIN])
+        response = client.get_file_status(**REQUEST_EXAMPLES[endpoints.FILE_STATUS])
         assert response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
 
 
@@ -131,8 +130,8 @@ def test_list_files(client, mocker):
     """Test list_files."""
 
     with mocker as rm:
-        client.login(**REQUEST_EXAMPLES[mcc.ENDPOINTS["login"]])
-        response = client.list_files(**REQUEST_EXAMPLES[mcc.ENDPOINTS["file_list"]])
+        client.login(**REQUEST_EXAMPLES[endpoints.LOGIN])
+        response = client.list_files(**REQUEST_EXAMPLES[endpoints.FILE_LIST])
         assert response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
 
 
@@ -140,10 +139,8 @@ def test_start_analysis(client, mocker):
     """Test start_analysis."""
 
     with mocker as rm:
-        client.login(**REQUEST_EXAMPLES[mcc.ENDPOINTS["login"]])
-        response = client.start_analysis(
-            **REQUEST_EXAMPLES[mcc.ENDPOINTS["analysis_start"]]
-        )
+        client.login(**REQUEST_EXAMPLES[endpoints.LOGIN])
+        response = client.start_analysis(**REQUEST_EXAMPLES[endpoints.ANALYSIS_START])
         assert response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
 
 
@@ -151,8 +148,8 @@ def test_get_analysis_status(client, mocker):
     """Test get_analysis_status."""
 
     with mocker as rm:
-        client.login(**REQUEST_EXAMPLES[mcc.ENDPOINTS["login"]])
+        client.login(**REQUEST_EXAMPLES[endpoints.LOGIN])
         response = client.get_analysis_status(
-            **REQUEST_EXAMPLES[mcc.ENDPOINTS["analysis_status"]]
+            **REQUEST_EXAMPLES[endpoints.ANALYSIS_STATUS]
         )
         assert response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
