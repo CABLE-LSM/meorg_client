@@ -150,7 +150,7 @@ class Client:
         dict or requests.Response
             Response from ME.org.
         """
-        response = self._make_request("post", endpoint=endpoints.LOGOUT)
+        response = self._make_request(mcc.HTTP_POST, endpoint=endpoints.LOGOUT)
 
         # Clear the headers.
         self.headers = dict()
@@ -171,7 +171,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="get", endpoint=endpoints.FILE_STATUS, data=dict(id=id)
+            method=mcc.HTTP_GET, endpoint=endpoints.FILE_STATUS, data=dict(id=id)
         )
 
     def upload_file(self, file_path: str) -> Union[dict, requests.Response]:
@@ -188,7 +188,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="post",
+            method=mcc.HTTP_POST,
             endpoint=endpoints.FILE_UPLOAD,
             data=open(file_path, "rb").read(),
         )
@@ -207,7 +207,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="get", endpoint=endpoints.FILE_LIST, data=dict(id=id)
+            method=mcc.HTTP_GET, endpoint=endpoints.FILE_LIST, data=dict(id=id)
         )
 
     def start_analysis(self, id: str) -> Union[dict, requests.Response]:
@@ -224,7 +224,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="put", endpoint=endpoints.ANALYSIS_START, data=dict(id=id)
+            method=mcc.HTTP_PUT, endpoint=endpoints.ANALYSIS_START, data=dict(id=id)
         )
 
     def get_analysis_status(self, id: str) -> Union[dict, requests.Response]:
@@ -241,7 +241,7 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method="get", endpoint=endpoints.ANALYSIS_STATUS, data=dict(id=id)
+            method=mcc.HTTP_GET, endpoint=endpoints.ANALYSIS_STATUS, data=dict(id=id)
         )
 
     def list_endpoints(self) -> Union[dict, requests.Response]:
@@ -255,4 +255,4 @@ class Client:
             Response from ME.org.
         """
 
-        return self._make_request(method="get", endpoint=endpoints.ENDPOINT_LIST)
+        return self._make_request(method=mcc.HTTP_GET, endpoint=endpoints.ENDPOINT_LIST)
