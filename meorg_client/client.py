@@ -4,12 +4,14 @@ import hashlib as hl
 import json
 import os
 from typing import Union
+from urllib.parse import urljoin
+from meorg_client.exceptions import RequestException
+import meorg_client.constants as mcc
+import meorg_client.endpoints as endpoints
 
-VALID_METHODS = ['POST', 'GET', 'DELETE', 'PUT']
 
 class Client:
-    
-    def __init__(self, base_url, email=None, password=None):
+    def __init__(self, base_url=mcc.MEORG_URL, email=None, password=None):
         """ME.org Client object.
 
         Suppying email and password will automatically log in.
@@ -25,13 +27,20 @@ class Client:
         """
         self.base_url = base_url
         self.headers = dict()
+        self.last_response = None
 
         # Automatically login.
         if email is not None and password is not None:
             self.login(email, password)
 
-
-    def _make_request(self, method: str, endpoint: str, data: dict=None, headers: dict=None) -> Union[dict, requests.Response]:
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        data: dict = None,
+        headers: dict = None,
+        return_json=True,
+    ) -> Union[dict, requests.Response]:
         """Make the request
 
         Parameters
@@ -44,6 +53,9 @@ class Client:
             Key/value pairs of data to send., by default None
         headers : dict, optional
             Headers to add to the request, by default None
+        return_json : bool, optional,
+            Automatically decode JSON response data, default True
+
 
         Returns
         -------
@@ -59,28 +71,37 @@ class Client:
         # Cast to uppercase, for consisency
         method = method.upper()
 
-        if method not in VALID_METHODS:
-            raise Exception(f'Invalid method {method}')
+        if method not in mcc.VALID_METHODS:
+            raise Exception(f"Invalid method {method}")
 
         # GET/PUT requests have the data interpolated into the url
-        if method in ['GET', 'PUT']:
-            endpoint = endpoint.format(data)
+        if method in mcc.INTERPOLATING_METHODS:
+            endpoint = endpoint.format(**data)
 
-        url = f"{self.base_url}/{endpoint}"
+        url = urljoin(self.base_url, endpoint)
         all_headers = {**self.headers, **headers} if headers else self.headers
-        response = requests.request(method, url, data=data, headers=all_headers)
 
-        if response.status_code == 200:
+        # Update the client with the last response
+        self.last_response = requests.request(
+            method, url, data=data, headers=all_headers
+        )
 
+        # RFC 2616 states status in the 2xx range are considered successful
+        if self.last_response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE:
             # Return JSON if that's what it is (this should be the default)
-            if response.headers.get('Content-Type', str) == 'application/json':
-                return response.json()
-            
-            return response
+            if (
+                self.last_response.headers.get("Content-Type", str)
+                == mcc.HTTP_CONTENT_TYPE_JSON
+                and return_json == True
+            ):
+                return self.last_response.json()
+
+            return self.last_response
 
         else:
-            raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
-
+            raise RequestException(
+                self.last_response.status_code, self.last_response.text
+            )
 
     def login(self, email: str, password: str):
         """Log the user into ME.org.
@@ -95,33 +116,31 @@ class Client:
         Raises
         ------
         Exception
-            When the login fails. 
+            When the login fails.
         """
 
         # Assemble payload
         login_data = {
-            'email': email,
-            'password': hl.sha256(password.encode('UTF-8')).hexdigest(),
-            'hashed': 'true'
+            "email": email,
+            "password": hl.sha256(password.encode("UTF-8")).hexdigest(),
+            "hashed": "true",
         }
 
         # Call
-        response = self._make_request('post', endpoint='login', data=login_data)
+        response = self._make_request("post", endpoint=endpoints.LOGIN, data=login_data)
 
         # Successful login
         if response.status_code == 200:
             auth_headers = {
-                'X-User-Id': response.json()['userId'],
-                'X-Auth-Token': response.json()['authToken']
+                "X-User-Id": response.json()["userId"],
+                "X-Auth-Token": response.json()["authToken"],
             }
 
             self.headers.update(auth_headers)
 
-        # Unsuccessful login
+        # Unsuccessful login (technically this will have already failed)
         else:
-
             raise Exception("Login failed")
-
 
     def logout(self):
         """Log the user out. Likely not necessary, can just let sessions expire.
@@ -131,20 +150,19 @@ class Client:
         dict or requests.Response
             Response from ME.org.
         """
-        response = self._make_request('post', endpoint='logout')
-        
+        response = self._make_request(mcc.HTTP_POST, endpoint=endpoints.LOGOUT)
+
         # Clear the headers.
         self.headers = dict()
 
         return response
 
-
-    def get_file_status(self, file_id: str) -> Union[dict, requests.Response]:
+    def get_file_status(self, id: str) -> Union[dict, requests.Response]:
         """Get the file status.
 
         Parameters
         ----------
-        file_id : str
+        id : str
             ID of the file.
 
         Returns
@@ -153,23 +171,35 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method='get',
-            endpoint='/files/status/{file_id}',
-            data=dict(file_id=file_id)
+            method=mcc.HTTP_GET, endpoint=endpoints.FILE_STATUS, data=dict(id=id)
         )
 
+    def upload_file(self, file_path: str) -> Union[dict, requests.Response]:
+        """Upload a file.
 
-    def upload_file(self, file_path):
-        raise NotImplementedError()
-    
+        Parameters
+        ----------
+        file_path : str
+            Path to the file.
 
-    def get_model_outputs(self, model_output_id: str) -> Union[dict, requests.Response]:
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method=mcc.HTTP_POST,
+            endpoint=endpoints.FILE_UPLOAD,
+            data=open(file_path, "rb").read(),
+        )
+
+    def list_files(self, id: str) -> Union[dict, requests.Response]:
         """Get a list of model outputs.
 
         Parameters
         ----------
-        model_output_id : str
-            Model output
+        id : str
+            Model output ID
 
         Returns
         -------
@@ -177,18 +207,15 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method='get',
-            endpoint='modeloutput/{model_output_id}/files',
-            data=dict(model_output_id=model_output_id)
+            method=mcc.HTTP_GET, endpoint=endpoints.FILE_LIST, data=dict(id=id)
         )
 
-
-    def start_analysis(self, model_output_id: str) -> Union[dict, requests.Response]:
+    def start_analysis(self, id: str) -> Union[dict, requests.Response]:
         """Start the analysis chain.
 
         Parameters
         ----------
-        model_output_id : str
+        id : str
             Model output ID.
 
         Returns
@@ -197,18 +224,15 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method='put',
-            endpoint=f'modeloutput/{model_output_id}/start',
-            data=dict(model_output_id=model_output_id)
+            method=mcc.HTTP_PUT, endpoint=endpoints.ANALYSIS_START, data=dict(id=id)
         )
-    
 
-    def get_model_output_status(self, analysis_id: str) -> Union[dict, requests.Response]:
+    def get_analysis_status(self, id: str) -> Union[dict, requests.Response]:
         """Check the status of the analysis chain.
 
         Parameters
         ----------
-        analysis_id : str
+        id : str
             Analysis ID.
 
         Returns
@@ -217,11 +241,8 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method='get',
-            endpoint='/modeloutput/{analysis_id}/status',
-            data=dict(analysis_id=analysis_id)
+            method=mcc.HTTP_GET, endpoint=endpoints.ANALYSIS_STATUS, data=dict(id=id)
         )
-
 
     def list_endpoints(self) -> Union[dict, requests.Response]:
         """List the endpoints available to the user.
@@ -233,8 +254,5 @@ class Client:
         dict or requests.Response
             Response from ME.org.
         """
-        
-        return self._make_request(
-            method='get',
-            endpoint='openapi.json'
-        )
+
+        return self._make_request(method=mcc.HTTP_GET, endpoint=endpoints.ENDPOINT_LIST)
