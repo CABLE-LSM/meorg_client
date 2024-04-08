@@ -17,3 +17,16 @@ class RequestException(Exception):
         self.response_text = response_text
         msg = f"Request failed with status code {status_code}: {response_text}"
         super().__init__(msg)
+
+
+class InvalidHTTPMethodException(Exception):
+    """Raised when the HTTP method is invalid.
+
+    Parameters
+    ----------
+    method : str
+        Invalid method name.
+    """
+
+    def __init__(self, method):
+        super().__init__(f"Invalid HTTP Method {method}.")

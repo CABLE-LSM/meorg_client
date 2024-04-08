@@ -1,13 +1,14 @@
 """Client object."""
 import requests
 import hashlib as hl
-import json
 import os
 from typing import Union
 from urllib.parse import urljoin
 from meorg_client.exceptions import RequestException
 import meorg_client.constants as mcc
 import meorg_client.endpoints as endpoints
+import meorg_client.exceptions as mx
+import mimetypes as mt
 
 
 class Client:
@@ -25,11 +26,16 @@ class Client:
         password : str, optional
             User password, by default None
         """
-        self.base_url = base_url
-        self.headers = dict()
+
+        # Initialise the mimetypes
+        mt.init()
+
+        # Ensure there is a trailing slash
+        self.base_url = f"{base_url}/" if base_url[-1] != "/" else base_url
+        self.headers = {"Cache-Control": "no-cache", "Pragma": "no-cache"}
         self.last_response = None
 
-        # Automatically login.
+        # Automatically login if credentials are set.
         if email is not None and password is not None:
             self.login(email, password)
 
@@ -37,71 +43,110 @@ class Client:
         self,
         method: str,
         endpoint: str,
-        data: dict = None,
-        headers: dict = None,
+        url_params: dict = {},
+        data: dict = {},
+        json: dict = {},
+        headers: dict = {},
+        files: dict = {},
         return_json=True,
-    ) -> Union[dict, requests.Response]:
-        """Make the request
+        **kwargs,
+    ):
+        """Make a request against the API
 
         Parameters
         ----------
         method : str
-            Method name (GET, POST, PUT, UPDATE, DELETE)
+            HTTP method.
         endpoint : str
-            URL slug to add to the base url.
+            URL template for the API endpoint.
+        url_params : dict, optional
+            Parameters to interpolate into the URL template, by default {}
         data : dict, optional
-            Key/value pairs of data to send., by default None
+            Data to send along with the request, by default {}
+        json : dict, optional
+            JSON data to send along with the request, by default {}
         headers : dict, optional
-            Headers to add to the request, by default None
-        return_json : bool, optional,
-            Automatically decode JSON response data, default True
-
+            Headers to attach to the request (will be combined with client headers), by default {}
+        files : dict, optional
+            Files payload to attach to request, by default {}
+        return_json : bool, optional
+            Return a JSON dict object, by default True
 
         Returns
         -------
         dict or requests.Response
-            Decoded JSON response, or raw response.
+            Dictionary or Request object, depending on context.
 
         Raises
         ------
-        Exception
-            Raised when there is an issue.
+        mx.InvalidHTTPMethodException
+            Raised when the specified method is invalid.
+        RequestException
+            Raised when the request fails.
         """
 
-        # Cast to uppercase, for consisency
         method = method.upper()
 
+        # Check that the method is allowed.
         if method not in mcc.VALID_METHODS:
-            raise Exception(f"Invalid method {method}")
+            raise mx.InvalidHTTPMethodException(method)
 
-        # GET/PUT requests have the data interpolated into the url
-        if method in mcc.INTERPOLATING_METHODS:
-            endpoint = endpoint.format(**data)
+        # Get the function and URL
+        func = getattr(requests, method.lower())
+        url = self._get_url(endpoint, **url_params)
 
-        url = urljoin(self.base_url, endpoint)
-        all_headers = {**self.headers, **headers} if headers else self.headers
+        # Assemble the headers
+        _headers = self._merge_headers(headers)
 
-        # Update the client with the last response
-        self.last_response = requests.request(
-            method, url, data=data, headers=all_headers
+        # Make the request, set it as the last response for future use
+        self.last_response = func(
+            url, data=data, json=json, headers=_headers, files=files, **kwargs
         )
 
-        # RFC 2616 states status in the 2xx range are considered successful
-        if self.last_response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE:
-            # Return JSON if that's what it is (this should be the default)
-            if (
-                self.last_response.headers.get("Content-Type", str)
-                == mcc.HTTP_CONTENT_TYPE_JSON
-                and return_json == True
-            ):
-                return self.last_response.json()
-
-            return self.last_response
-
-        else:
+        # Check to see if it was successful
+        if self.last_response.status_code not in mcc.HTTP_STATUS_SUCCESS_RANGE:
             raise RequestException(
                 self.last_response.status_code, self.last_response.text
             )
+
+        # This is the default
+        if return_json:
+            return self.last_response.json()
+
+        # For flexibility
+        return self.last_response
+
+    def _get_url(self, endpoint, **kwargs):
+        """Get the well-formed URL for the call.
+
+        Parameters
+        ----------
+        endpoint : str
+            Endpoint to be appended to the base URL.
+        **kwargs :
+            Key/value pairs to interpolate into the URL template.
+
+        Returns
+        -------
+        str
+            URL.
+        """
+        return urljoin(self.base_url + "/", endpoint).format(**kwargs)
+
+    def _merge_headers(self, headers: dict = dict()):
+        """Merge additional headers into the client headers (i.e. Auth)
+
+        Parameters
+        ----------
+        headers : dict, optional
+            Additional headers to add to the client headers, by default dict()
+
+        Returns
+        -------
+        dict
+            Merged headers.
+        """
+        return {**self.headers, **headers}
 
     def login(self, email: str, password: str):
         """Log the user into ME.org.
@@ -127,35 +172,38 @@ class Client:
         }
 
         # Call
-        response = self._make_request("post", endpoint=endpoints.LOGIN, data=login_data)
+        response = self._make_request(
+            method=mcc.HTTP_POST,
+            endpoint=endpoints.LOGIN,
+            json=login_data,
+            return_json=True,
+        )
 
         # Successful login
-        if response.status_code == 200:
+        if self.last_response.status_code == 200:
             auth_headers = {
-                "X-User-Id": response.json()["userId"],
-                "X-Auth-Token": response.json()["authToken"],
+                "X-User-Id": response["data"]["userId"],
+                "X-Auth-Token": response["data"]["authToken"],
             }
 
             self.headers.update(auth_headers)
 
         # Unsuccessful login (technically this will have already failed)
         else:
-            raise Exception("Login failed")
+            raise RequestException(
+                self.last_response.status_code, self.last_response.text
+            )
 
     def logout(self):
-        """Log the user out. Likely not necessary, can just let sessions expire.
-
-        Returns
-        -------
-        dict or requests.Response
-            Response from ME.org.
-        """
-        response = self._make_request(mcc.HTTP_POST, endpoint=endpoints.LOGOUT)
+        """Log the user out. Likely not necessary, can just let sessions expire."""
+        response = self._make_request(
+            method=mcc.HTTP_POST, endpoint=endpoints.LOGOUT, return_json=False
+        )
 
         # Clear the headers.
-        self.headers = dict()
-
-        return response
+        if response.status_code == 200:
+            self.headers.pop("X-User-Id", None)
+            self.headers.pop("X-Auth-Token", None)
 
     def get_file_status(self, id: str) -> Union[dict, requests.Response]:
         """Get the file status.
@@ -163,15 +211,15 @@ class Client:
         Parameters
         ----------
         id : str
-            ID of the file.
+            Job ID of the file.
 
         Returns
         -------
-        dict or requests.Response
+        Union[dict, requests.Response]
             Response from ME.org.
         """
         return self._make_request(
-            method=mcc.HTTP_GET, endpoint=endpoints.FILE_STATUS, data=dict(id=id)
+            method=mcc.HTTP_GET, endpoint=endpoints.FILE_STATUS, url_params=dict(id=id)
         )
 
     def upload_file(self, file_path: str) -> Union[dict, requests.Response]:
@@ -187,10 +235,21 @@ class Client:
         Union[dict, requests.Response]
             Response from ME.org.
         """
+        # Get the filename and extension
+        filename = os.path.basename(file_path)
+        ext = filename.split(".")[-1]
+
+        # Get the MIME type (raises a KeyError if it is unknown)
+        mimetype = mt.types_map[f".{ext}"]
+
+        # Assemble the file payload
+        payload = dict(file=(filename, open(file_path, "rb"), mimetype))
+
         return self._make_request(
             method=mcc.HTTP_POST,
             endpoint=endpoints.FILE_UPLOAD,
-            data=open(file_path, "rb").read(),
+            files=payload,
+            return_json=True,
         )
 
     def list_files(self, id: str) -> Union[dict, requests.Response]:
@@ -203,11 +262,43 @@ class Client:
 
         Returns
         -------
-        dict or requests.Response
+        Union[dict, requests.Response]
             Response from ME.org.
         """
         return self._make_request(
-            method=mcc.HTTP_GET, endpoint=endpoints.FILE_LIST, data=dict(id=id)
+            method=mcc.HTTP_GET, endpoint=endpoints.FILE_LIST, url_params=dict(id=id)
+        )
+
+    def attach_files_to_model_output(
+        self, id: str, files: list
+    ) -> Union[dict, requests.Response]:
+        """Attach files to a model output.
+
+        Parameters
+        ----------
+        id : str
+            Model output ID.
+        files : list
+            List of file IDs.
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+
+        # Get a list of files for the model output
+        current_files = self.list_files(id).get("data").get("files")
+
+        # Attach the new files to this list
+        new_files = current_files + files
+
+        # Update the resource
+        return self._make_request(
+            mcc.HTTP_PATCH,
+            endpoint=endpoints.FILE_LIST,
+            url_params=dict(id=id),
+            json=new_files,
         )
 
     def start_analysis(self, id: str) -> Union[dict, requests.Response]:
@@ -220,11 +311,13 @@ class Client:
 
         Returns
         -------
-        dict or requests.Response
+        Union[dict, requests.Response]
             Response from ME.org.
         """
         return self._make_request(
-            method=mcc.HTTP_PUT, endpoint=endpoints.ANALYSIS_START, data=dict(id=id)
+            method=mcc.HTTP_PUT,
+            endpoint=endpoints.ANALYSIS_START,
+            url_params=dict(id=id),
         )
 
     def get_analysis_status(self, id: str) -> Union[dict, requests.Response]:
@@ -237,11 +330,13 @@ class Client:
 
         Returns
         -------
-        dict or requests.Response
+        Union[dict, requests.Response]
             Response from ME.org.
         """
         return self._make_request(
-            method=mcc.HTTP_GET, endpoint=endpoints.ANALYSIS_STATUS, data=dict(id=id)
+            method=mcc.HTTP_GET,
+            endpoint=endpoints.ANALYSIS_STATUS,
+            url_params=dict(id=id),
         )
 
     def list_endpoints(self) -> Union[dict, requests.Response]:
@@ -251,8 +346,17 @@ class Client:
 
         Returns
         -------
-        dict or requests.Response
+        Union[dict, requests.Response]
             Response from ME.org.
         """
-
         return self._make_request(method=mcc.HTTP_GET, endpoint=endpoints.ENDPOINT_LIST)
+
+    def success(self):
+        """Test if the last request was successful.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        return self.last_response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
