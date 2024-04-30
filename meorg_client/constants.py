@@ -16,4 +16,4 @@ INTERPOLATING_METHODS = [HTTP_GET, HTTP_PUT, HTTP_PATCH]
 HTTP_STATUS_SUCCESS_RANGE = range(200, 300)
 
 # Production URL
-MEORG_URL = "https://modelevaluation.org/api"
+MEORG_BASE_URL_PROD = "https://modelevaluation.org/api"

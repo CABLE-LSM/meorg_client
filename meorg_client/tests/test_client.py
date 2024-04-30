@@ -9,15 +9,15 @@ store = ValueStorage()
 
 
 def _get_authenticated_client():
-    base_url = os.environ.get("MEORG_BASE_URL")
+
     email = os.environ.get("MEORG_EMAIL")
     password = os.environ.get("MEORG_PASSWORD")
     model_output_id = os.environ.get("MEORG_MODEL_OUTPUT_ID")
 
-    if None in [base_url, email, password, model_output_id]:
-        raise TypeError("Test Secrets not set!!!")
+    client = Client(email=email, password=password, dev_mode=True)
 
-    client = Client(base_url=base_url, email=email, password=password)
+    if None in [email, password, model_output_id, client.base_url]:
+        raise TypeError("Test Secrets not set!!!")
 
     # Attach the model output id for convenience in testing
     client._model_output_id = model_output_id

@@ -12,10 +12,10 @@ import mimetypes as mt
 
 
 class Client:
-    def __init__(self, base_url=mcc.MEORG_URL, email=None, password=None):
+    def __init__(self, email: str = None, password: str = None, dev_mode: bool = False):
         """ME.org Client object.
 
-        Suppying email and password will automatically log in.
+        Supplying email and password will automatically log in.
 
         Parameters
         ----------
@@ -25,13 +25,16 @@ class Client:
             Registered email address, by default None
         password : str, optional
             User password, by default None
+        dev_mode : bool, optional
+            Development mode (uses dev environment), by default False
         """
 
         # Initialise the mimetypes
         mt.init()
 
-        # Ensure there is a trailing slash
-        self.base_url = f"{base_url}/" if base_url[-1] != "/" else base_url
+        # Set base_url for the API
+        self.base_url = mcc.MEORG_BASE_URL_PROD if dev_mode == False else os.getenv('MEORG_BASE_URL_DEV', None)
+
         self.headers = {"Cache-Control": "no-cache", "Pragma": "no-cache"}
         self.last_response = None
 
