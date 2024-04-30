@@ -30,7 +30,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       env:
-        MEORG_BASE_URL: ${{ secrets.MEORG_BASE_URL }}
+        MEORG_BASE_URL_DEV: ${{ secrets.MEORG_BASE_URL_DEV }}
         MEORG_EMAIL: ${{ secrets.MEORG_EMAIL }}
         MEORG_PASSWORD: ${{ secrets.MEORG_PASSWORD }}
         MEORG_MODEL_OUTPUT_ID: ${{ secrets.MEORG_MODEL_OUTPUT_ID }}
