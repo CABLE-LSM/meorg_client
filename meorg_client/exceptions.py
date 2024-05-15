@@ -15,8 +15,8 @@ class RequestException(Exception):
     def __init__(self, status_code, response_text):
         self.status_code = status_code
         self.response_text = response_text
-        msg = f"Request failed with status code {status_code}: {response_text}"
-        super().__init__(msg)
+        self.msg = f"Request failed with status code {status_code}: {response_text}"
+        super().__init__(self.msg)
 
 
 class InvalidHTTPMethodException(Exception):
