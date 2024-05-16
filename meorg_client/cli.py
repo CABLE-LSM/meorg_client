@@ -21,11 +21,22 @@ def _get_client():
     # Get the dev-mode flag from the environment, better than passing the dev flag everywhere.
     dev_mode = os.getenv("MEORG_DEV_MODE", "0") == "1"
 
-    if dev_mode:
-        # Get the credentials from the user space
-        credentials = mcu.load_user_data("credentials-dev.json")
+    credentials = mcu.get_user_data_filepath('credentials.json')
+    credentials_dev = mcu.get_user_data_filepath('credentials-dev.json')
+
+    # In dev mode and the configuration file exists
+    if dev_mode and credentials_dev.is_file():
+        credentials = mcu.load_user_data('credentials-dev.json')
+    
+    # In dev mode and it doesn't (i.e. Actions)
+    elif dev_mode and not credentials_dev.is_file():
+        credentials = dict(
+            email=os.getenv('MEORG_EMAIL'),
+            password=os.getenv('MEORG_PASSWORD')
+        )
+    
+    # Production credentials
     else:
-        # Get the credentials from the user space
         credentials = mcu.load_user_data("credentials.json")
 
     # Get the client
