@@ -3,18 +3,15 @@ import os
 import pytest
 from meorg_client.client import Client
 import meorg_client.utilities as mu
-from conftest import ValueStorage
-
-store = ValueStorage()
+from conftest import store
 
 
 def _get_authenticated_client():
-
     email = os.environ.get("MEORG_EMAIL")
     password = os.environ.get("MEORG_PASSWORD")
     model_output_id = os.environ.get("MEORG_MODEL_OUTPUT_ID")
 
-    client = Client(email=email, password=password, dev_mode=True)
+    client = Client(email=email, password=password)
 
     if None in [email, password, model_output_id, client.base_url]:
         raise TypeError("Test Secrets not set!!!")

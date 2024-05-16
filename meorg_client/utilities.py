@@ -54,3 +54,15 @@ def load_package_data(filename: str) -> dict:
 
     # Decode and return.
     return PACKAGE_DATA_DECODERS[ext](raw)
+
+
+def get_user_data_filepath(filename):
+    """Get the filepath to the user file."""
+    return Path.home() / ".meorg" / filename
+
+def load_user_data(filename):
+    """Load data from the user's home directory."""
+    filepath = get_user_data_filepath(filename)
+    raw = open(filepath, "r").read()
+    ext = filename.split(".")[-1]
+    return PACKAGE_DATA_DECODERS[ext](raw)
