@@ -32,8 +32,13 @@ class Client:
         # Initialise the mimetypes
         mt.init()
 
-        # Set base_url for the API
-        self.base_url = mcc.MEORG_BASE_URL_PROD if dev_mode == False else os.getenv('MEORG_BASE_URL_DEV', None)
+        # Dev mode can be set by the user or from the environment
+        dev_mode = dev_mode or os.getenv("MEORG_DEV_MODE", "0") == "1"
+
+        if dev_mode:
+            self.base_url = os.getenv("MEORG_BASE_URL_DEV", None)
+        else:
+            self.base_url = mcc.MEORG_BASE_URL_PROD
 
         self.headers = {"Cache-Control": "no-cache", "Pragma": "no-cache"}
         self.last_response = None
