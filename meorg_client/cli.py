@@ -65,7 +65,13 @@ def _call(func, **kwargs):
     try:
         return func(**kwargs)
     except Exception as ex:
+        
         click.echo(ex.msg, err=True)
+
+        # Bubble up the exception
+        if os.getenv('MEORG_DEV_MODE') == '1':
+            raise
+
         sys.exit(1)
 
 
@@ -73,11 +79,14 @@ def _call(func, **kwargs):
 def cli():
     """
     ModelEvaluation.org client utility.
+
+    For more detail run:
+    meorg [SUBCOMMAND] --help
     """
     pass
 
 
-@click.command()
+@click.command('list')
 def list_endpoints():
     """
     List the available endpoints for the server.
@@ -98,7 +107,7 @@ def list_endpoints():
             click.echo(out)
 
 
-@click.command()
+@click.command('status')
 @click.argument("id")
 def file_status(id):
     """
@@ -117,7 +126,7 @@ def file_status(id):
         click.echo("Pending")
 
 
-@click.command()
+@click.command('upload')
 @click.argument("file_path")
 def file_upload(file_path):
     """
@@ -133,7 +142,7 @@ def file_upload(file_path):
     click.echo(job_id)
 
 
-@click.command()
+@click.command('list')
 @click.argument("id")
 def file_list(id):
     """
@@ -148,7 +157,7 @@ def file_list(id):
         click.echo(f)
 
 
-@click.command()
+@click.command('attach')
 @click.argument("file_id")
 @click.argument("output_id")
 def file_attach(file_id, output_id):
@@ -162,7 +171,7 @@ def file_attach(file_id, output_id):
     click.echo("SUCCESS")
 
 
-@click.command()
+@click.command('start')
 @click.argument("id")
 def analysis_start(id):
     """
@@ -179,7 +188,7 @@ def analysis_start(id):
         click.echo(analysis_id)
 
 
-@click.command()
+@click.command('status')
 @click.argument("id")
 def analysis_status(id):
     """
@@ -240,10 +249,36 @@ def initialise(dev=False):
     click.echo("Credentials written to " + str(cred_filepath))
 
 
-# Add all of the commands automatically
-for name, obj in getmembers(sys.modules[__name__]):
-    if isinstance(obj, click.core.Command) and name != "cli":
-        cli.add_command(obj)
+# Add groups for nested subcommands
+@click.group('endpoints', help='API endpoint commands.')
+def cli_endpoints():
+    pass
+
+@click.group('file', help='File commands.')
+def cli_file():
+    pass
+
+@click.group('analysis', help='Analysis commands.')
+def cli_analysis():
+    pass
+
+# Add file commands
+cli_file.add_command(file_list)
+cli_file.add_command(file_upload)
+cli_file.add_command(file_status)
+cli_file.add_command(file_attach)
+
+# Add endpoint commands
+cli_endpoints.add_command(list_endpoints)
+
+# Add analysis commands
+cli_analysis.add_command(analysis_start)
+cli_analysis.add_command(analysis_status)
+
+# Add subparsers to the master
+cli.add_command(cli_endpoints)
+cli.add_command(cli_file)
+cli.add_command(cli_analysis)
 
 
 if __name__ == "__main__":
