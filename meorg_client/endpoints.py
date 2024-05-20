@@ -9,7 +9,7 @@ LOGOUT = "logout"
 
 # Files
 FILE_LIST = "modeloutput/{id}/files"
-FILE_UPLOAD = "files"
+FILE_UPLOAD = "upload"
 FILE_STATUS = "files/status/{id}"
 
 # Analysis

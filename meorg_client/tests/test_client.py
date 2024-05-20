@@ -4,6 +4,7 @@ import pytest
 from meorg_client.client import Client
 import meorg_client.utilities as mu
 from conftest import store
+import io
 
 
 def _get_authenticated_client():
@@ -55,14 +56,19 @@ def test_upload_file(client):
     store.set("file_upload", response)
 
 
-def test_file_status(client):
-    # Get the response
-    job_id = store.get("file_upload").get("data").get("jobId")
+def test_upload_file_multiple(client):
+    """Test the uploading of a file."""
+    # Upload the file.
+    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
 
-    response = client.get_file_status(job_id)
+    # Upload the file
+    response = client.upload_file([filepath, filepath])
+
+    # Make sure it worked
     assert client.success()
 
-    store.set("file_status", response)
+    # Store the response.
+    store.set("file_upload_multiple", response)
 
 
 def test_file_list(client):
@@ -73,7 +79,8 @@ def test_file_list(client):
 
 def test_attach_files_to_model_output(client):
     # Get the file id from the job id
-    file_id = store.get("file_status").get("data").get("files")[0].get("file")
+    # file_id = store.get("file_status").get("data").get("files")[0].get("file")
+    file_id = store.get("file_upload").get("data").get("files")[0].get("file")
 
     # Attach it to the model output
     _ = client.attach_files_to_model_output(client._model_output_id, [file_id])
@@ -98,3 +105,22 @@ def test_logout(client):
     """Test logout."""
     client.logout()
     assert "X-Auth-Token" not in client.headers.keys()
+
+
+def test_upload_file_large(client):
+    """Test the uploading of a large-ish file."""
+
+    # Create an in-memory 10mb file
+    size = 10000000
+    with io.BytesIO() as buffer:
+        buffer.write(bytearray(os.urandom(size)))
+        buffer.seek(0)
+
+        # Upload the file.
+        filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
+
+        # Upload the file
+        _ = client.upload_file(file_path=filepath, file_obj=buffer)
+
+        # Make sure it worked
+        assert client.success()

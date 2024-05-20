@@ -9,6 +9,7 @@ import meorg_client.constants as mcc
 import meorg_client.endpoints as endpoints
 import meorg_client.exceptions as mx
 import mimetypes as mt
+import io
 
 
 class Client:
@@ -213,45 +214,67 @@ class Client:
             self.headers.pop("X-User-Id", None)
             self.headers.pop("X-Auth-Token", None)
 
-    def get_file_status(self, id: str) -> Union[dict, requests.Response]:
-        """Get the file status.
-
-        Parameters
-        ----------
-        id : str
-            Job ID of the file.
-
-        Returns
-        -------
-        Union[dict, requests.Response]
-            Response from ME.org.
-        """
-        return self._make_request(
-            method=mcc.HTTP_GET, endpoint=endpoints.FILE_STATUS, url_params=dict(id=id)
-        )
-
-    def upload_file(self, file_path: str) -> Union[dict, requests.Response]:
+    def upload_file(
+        self,
+        file_path: Union[str, list],
+        file_obj: Union[io.BufferedReader, list] = None,
+    ) -> Union[dict, requests.Response]:
         """Upload a file.
 
         Parameters
         ----------
-        file_path : str
+        file_path : str or list
             Path to the file.
+        file_obj : io.BufferedReader, optional
+            File object (handle) to allow direct supply of file object, by default None
 
         Returns
         -------
         Union[dict, requests.Response]
             Response from ME.org.
         """
-        # Get the filename and extension
-        filename = os.path.basename(file_path)
-        ext = filename.split(".")[-1]
 
-        # Get the MIME type (raises a KeyError if it is unknown)
-        mimetype = mt.types_map[f".{ext}"]
+        payload = list()
 
-        # Assemble the file payload
-        payload = dict(file=(filename, open(file_path, "rb"), mimetype))
+        # Cast as list for iterative upload
+        if not isinstance(file_path, list):
+            file_path = [file_path]
+
+        # Payload assembly
+        if file_obj is not None:
+            # Cast as a list for iterative upload
+            if not isinstance(file_obj, list):
+                file_objs = [file_obj]
+
+            if len(file_objs) != len(file_path):
+                raise ValueError("Supplied file paths and file objects do not match")
+
+            for ix, file_obj in enumerate(file_objs):
+                if not isinstance(file_obj, io.BufferedReader) and not isinstance(
+                    file_obj, io.BytesIO
+                ):
+                    raise TypeError(
+                        f"Supplied file object {ix} is not an io.BufferedReader or io.BytesIO."
+                    )
+
+                _file_path = file_path[ix]
+
+                # Get the filename and extension
+                filename = os.path.basename(_file_path)
+                ext = filename.split(".")[-1]
+                mimetype = mt.types_map[f".{ext}"]
+
+                payload.append(("file", (filename, file_obj, mimetype)))
+
+        else:
+            for _file_path in file_path:
+                # Get the filename and extension
+                filename = os.path.basename(_file_path)
+                ext = filename.split(".")[-1]
+                mimetype = mt.types_map[f".{ext}"]
+                file_obj = open(_file_path, "rb")
+
+                payload.append(("file", (filename, file_obj, mimetype)))
 
         return self._make_request(
             method=mcc.HTTP_POST,
