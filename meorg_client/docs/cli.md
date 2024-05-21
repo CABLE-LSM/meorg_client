@@ -25,7 +25,17 @@ Alternatively, you can create a credentials file at the target filepath manually
 }
 ```
 
-Once credentials are set up, you may use the command-line utilities listed alphabetically below. However, given the asynchronous nature of the server requests, a typical workflow is more useful.
+## Get your Model Output ID
+
+As most of the commands act with respect to a given model output, you must first establish the `$MODEL_OUTPUT_ID` to use.
+
+1. Go to modelevaluation.org.
+2. Select "Model Outputs" from the main navigation.
+3. Select the appropriate subset (i.e. Owned by Me).
+4. Click the appropriate model output.
+5. The `$MODEL_OUTPUT_ID` will be displayed in the copy box at the top of the page.
+
+Once credentials are set up and you have your `$MODEL_OUTPUT_ID`, you may use the command-line utilities listed alphabetically below. However, given the asynchronous nature of the server requests, a typical workflow is more useful.
 
 ## Typical Workflow
 
@@ -69,7 +79,9 @@ meorg analysis status $ANALYSIS_ID
 # The final command will output the status and URL to the dashboard.
 ```
 
-## analysis start
+## Commands Available
+
+### analysis start
 
 To start an analysis for a given model output using the files provided, execute the following command:
 
@@ -84,7 +96,7 @@ modelevaluation.org/modelOutput/display/**kafS53HgWu2CDXxgC**
 
 This command will return an `$ANALYSIS_ID` upon success which is used in `analysis status`.
 
-## analysis status
+### analysis status
 
 To query the status of an analysis, execute the following command:
 
@@ -94,7 +106,7 @@ meorg analysis status $ANALYSIS_ID
 
 Where `$ANALYSIS_ID` is the ID returned from `analysis start`.
 
-## file attach
+### file attach
 
 To attach a file to a model output prior to executing an analysis, execute the following command:
 
@@ -104,7 +116,7 @@ meorg file attach $FILE_ID $MODEL_OUTPUT_$ID
 
 Where `$FILE_ID` is the ID returned from `file-status` and `$MODEL_OUTPUT_ID` is the ID of the model output in question.
 
-## file status
+### file status (deprecated)
 
 Given that a `file upload` puts a file in a queue to transfer to the object store, the file itself is not available for use until it has been successfully transferred. In order to check the status of this transfer, execute the following command:
 
@@ -116,7 +128,9 @@ Where `$JOB_ID` is the ID returned from `file upload`.
 
 Once a file is listed as completed, the command will return the true `$FILE_ID` which can be used in `file-attach`.
 
-## file upload
+> NOTE: The file status command is likely to be deprecated in the near future.
+
+### file upload
 
 To upload a file to the staging area of the server, execute the following command:
 
@@ -128,11 +142,11 @@ Where `$PATH` is the local path to the file.
 
 This command will return a `$JOB_ID` upon success, which can be used with `file status` to check the transfer status to the object store.
 
-## initialise
+### initialise
 
 A simple helper command to write the user credentials file for password-less interaction with the client over the command-line. See above.
 
-## endpoints list
+### endpoints list
 
 To list all of the available API endpoints, execute the following command:
 

@@ -1,1 +1,7 @@
 site_name: meorg_client
+
+theme: material
+
+plugins:
+- search
+- mkdocstrings
