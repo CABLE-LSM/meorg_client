@@ -8,12 +8,28 @@ import io
 
 
 def _get_authenticated_client():
+    """Get an authenticated client for tests.
+
+    Returns
+    -------
+    meorg_client.client.Client
+        Client object.
+
+    Raises
+    ------
+    TypeError
+        Raised with test secrets are not set in the environment.
+    """
+
+    # Get the details from the environment.
     email = os.environ.get("MEORG_EMAIL")
     password = os.environ.get("MEORG_PASSWORD")
     model_output_id = os.environ.get("MEORG_MODEL_OUTPUT_ID")
 
+    # Connect
     client = Client(email=email, password=password)
 
+    # Ensure everything is set
     if None in [email, password, model_output_id, client.base_url]:
         raise TypeError("Test Secrets not set!!!")
 
@@ -47,7 +63,7 @@ def test_upload_file(client):
     filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
 
     # Upload the file
-    response = client.upload_file(filepath)
+    response = client.upload_files(filepath)
 
     # Make sure it worked
     assert client.success()
@@ -62,7 +78,7 @@ def test_upload_file_multiple(client):
     filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
 
     # Upload the file
-    response = client.upload_file([filepath, filepath])
+    response = client.upload_files([filepath, filepath])
 
     # Make sure it worked
     assert client.success()
@@ -72,6 +88,7 @@ def test_upload_file_multiple(client):
 
 
 def test_file_list(client):
+    """Test the listinf of files for a model output."""
     response = client.list_files(client._model_output_id)
     assert client.success()
     assert isinstance(response.get("data").get("files"), list)
@@ -79,7 +96,6 @@ def test_file_list(client):
 
 def test_attach_files_to_model_output(client):
     # Get the file id from the job id
-    # file_id = store.get("file_status").get("data").get("files")[0].get("file")
     file_id = store.get("file_upload").get("data").get("files")[0].get("file")
 
     # Attach it to the model output
@@ -89,22 +105,18 @@ def test_attach_files_to_model_output(client):
 
 
 def test_start_analysis(client):
+    """Test starting an analysis."""
     response = client.start_analysis(client._model_output_id)
     assert client.success()
     store.set("start_analysis", response)
 
 
 def test_get_analysis_status(client):
+    """Test getting the analysis status."""
     # Get the analysis id from the store
     analysis_id = store.get("start_analysis").get("data").get("analysisId")
     _ = client.get_analysis_status(analysis_id)
     assert client.success()
-
-
-def test_logout(client):
-    """Test logout."""
-    client.logout()
-    assert "X-Auth-Token" not in client.headers.keys()
 
 
 def test_upload_file_large(client):
@@ -113,14 +125,21 @@ def test_upload_file_large(client):
     # Create an in-memory 10mb file
     size = 10000000
     with io.BytesIO() as buffer:
+        # Create a byte array (readable)
         buffer.write(bytearray(os.urandom(size)))
         buffer.seek(0)
 
-        # Upload the file.
-        filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
+        # Mock the filename for the test
+        buffer.name = "test/test.txt"
 
         # Upload the file
-        _ = client.upload_file(file_path=filepath, file_obj=buffer)
+        _ = client.upload_files(buffer)
 
         # Make sure it worked
         assert client.success()
+
+
+def test_logout(client):
+    """Test logout."""
+    client.logout()
+    assert "X-Auth-Token" not in client.headers.keys()
