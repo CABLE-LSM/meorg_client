@@ -115,7 +115,7 @@ def file_upload(file_path):
     client = _get_client()
 
     # Upload the file, get the job ID
-    response = _call(client.upload_file, file_path=list(file_path))
+    response = _call(client.upload_files, files=list(file_path))
     files = response.get("data").get("files")
     for f in files:
         click.echo(f.get("file"))
@@ -247,7 +247,6 @@ def cli_analysis():
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
-# cli_file.add_command(file_status)
 cli_file.add_command(file_attach)
 
 # Add endpoint commands

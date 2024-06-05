@@ -48,19 +48,6 @@ def test_file_multiple(runner):
     time.sleep(5)
 
 
-# def test_file_status(runner):
-#     """Test file-status via CLI."""
-
-#     # Get the file ID based on the job ID
-#     job_id = store.get("job_id")
-#     result = runner.invoke(cli.file_status, [job_id])
-#     assert result.exit_code == 0
-#     assert result.output != "Pending"
-
-#     # Add file_id to the store for the next test
-#     store.set("file_id", result.output.strip())
-
-
 def test_file_list(runner):
     """Test file-list via CLI."""
     result = runner.invoke(cli.file_list, [store.get("model_output_id")])
