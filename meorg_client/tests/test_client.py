@@ -4,7 +4,7 @@ import pytest
 from meorg_client.client import Client
 import meorg_client.utilities as mu
 from conftest import store
-import io
+import tempfile as tf
 
 
 def _get_authenticated_client():
@@ -124,19 +124,20 @@ def test_upload_file_large(client):
 
     # Create an in-memory 10mb file
     size = 10000000
-    with io.BytesIO() as buffer:
-        # Create a byte array (readable)
-        buffer.write(bytearray(os.urandom(size)))
-        buffer.seek(0)
+    data = bytearray(os.urandom(size))
 
-        # Mock the filename for the test
-        buffer.name = "test/test.txt"
+    with tf.NamedTemporaryFile() as tmp:
+        # Write and set cursor
+        tmp.write(data)
+        tmp.seek(0)
 
-        # Upload the file
-        _ = client.upload_files(buffer)
+        # tmp files have no extension...
+        tmp.name = tmp.name + ".nc"
 
-        # Make sure it worked
-        assert client.success()
+        # Upload and ensure it worked
+        _ = client.upload_files(tmp)
+
+    assert client.success()
 
 
 def test_logout(client):

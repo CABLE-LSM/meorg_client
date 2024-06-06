@@ -9,7 +9,6 @@ import meorg_client.constants as mcc
 import meorg_client.endpoints as endpoints
 import meorg_client.exceptions as mx
 import mimetypes as mt
-import io
 from pathlib import Path
 
 
@@ -247,13 +246,11 @@ class Client:
         _files = list()
         for ix, f in enumerate(files):
             # Path-like
-            if isinstance(f, (str, Path)):
+            if isinstance(f, (str, Path)) and os.path.isfile(f):
                 _files.append(open(f, "rb"))
 
             # IO handle (i.e. open file or bytes)
-            elif isinstance(
-                f, (io.BufferedReader, io.BytesIO, io.TextIOWrapper)
-            ) and hasattr(f, "name"):
+            elif f.readable() and hasattr(f, "name"):
                 _files.append(f)
 
             # Bail out
@@ -273,12 +270,18 @@ class Client:
             payload.append(("file", (filename, _f, mimetype)))
 
         # Make the request
-        return self._make_request(
+        response = self._make_request(
             method=mcc.HTTP_POST,
             endpoint=endpoints.FILE_UPLOAD,
             files=payload,
             return_json=True,
         )
+
+        # Close all the file descriptors (requests should do this, but just to be sure)
+        for fd in payload:
+            fd[1][1].close()
+
+        return response
 
     def list_files(self, id: str) -> Union[dict, requests.Response]:
         """Get a list of model outputs.
