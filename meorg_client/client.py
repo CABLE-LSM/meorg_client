@@ -9,6 +9,7 @@ import meorg_client.constants as mcc
 import meorg_client.endpoints as endpoints
 import meorg_client.exceptions as mx
 import mimetypes as mt
+from pathlib import Path
 
 
 class Client:
@@ -213,52 +214,74 @@ class Client:
             self.headers.pop("X-User-Id", None)
             self.headers.pop("X-Auth-Token", None)
 
-    def get_file_status(self, id: str) -> Union[dict, requests.Response]:
-        """Get the file status.
-
-        Parameters
-        ----------
-        id : str
-            Job ID of the file.
-
-        Returns
-        -------
-        Union[dict, requests.Response]
-            Response from ME.org.
-        """
-        return self._make_request(
-            method=mcc.HTTP_GET, endpoint=endpoints.FILE_STATUS, url_params=dict(id=id)
-        )
-
-    def upload_file(self, file_path: str) -> Union[dict, requests.Response]:
+    def upload_files(
+        self,
+        files,
+    ) -> Union[dict, requests.Response]:
         """Upload a file.
 
         Parameters
         ----------
-        file_path : str
-            Path to the file.
+        files : path-like, readable or list
+            Path to the file, readable object, or a list containing either.
 
         Returns
         -------
         Union[dict, requests.Response]
             Response from ME.org.
+
+        Raises
+        ------
+        TypeError
+            When supplied file(s) are neither path-like nor readable.
+        FileNotFoundError
+            When supplied file(s) cannot be found.
         """
-        # Get the filename and extension
-        filename = os.path.basename(file_path)
-        ext = filename.split(".")[-1]
 
-        # Get the MIME type (raises a KeyError if it is unknown)
-        mimetype = mt.types_map[f".{ext}"]
+        # Cast as list for iterative upload
+        if not isinstance(files, list):
+            files = [files]
 
-        # Assemble the file payload
-        payload = dict(file=(filename, open(file_path, "rb"), mimetype))
+        # Prepare the files
+        _files = list()
+        for ix, f in enumerate(files):
+            # Path-like
+            if isinstance(f, (str, Path)) and os.path.isfile(f):
+                _files.append(open(f, "rb"))
 
-        return self._make_request(
+            # IO handle (i.e. open file or bytes)
+            elif f.readable() and hasattr(f, "name"):
+                _files.append(f)
+
+            # Bail out
+            else:
+                dtype = type(f)
+                raise TypeError(
+                    f"File at index {ix} is neither path-like nor readable ({dtype})."
+                )
+
+        # Prepare the payload from the files
+        payload = list()
+
+        for _f in _files:
+            filename = os.path.basename(_f.name)
+            ext = filename.split(".")[-1]
+            mimetype = mt.types_map[f".{ext}"]
+            payload.append(("file", (filename, _f, mimetype)))
+
+        # Make the request
+        response = self._make_request(
             method=mcc.HTTP_POST,
             endpoint=endpoints.FILE_UPLOAD,
             files=payload,
             return_json=True,
         )
+
+        # Close all the file descriptors (requests should do this, but just to be sure)
+        for fd in payload:
+            fd[1][1].close()
+
+        return response
 
     def list_files(self, id: str) -> Union[dict, requests.Response]:
         """Get a list of model outputs.

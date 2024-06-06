@@ -4,7 +4,6 @@ from meorg_client.client import Client
 import meorg_client.utilities as mcu
 import os
 import sys
-from inspect import getmembers
 import getpass
 from pathlib import Path
 import json
@@ -21,20 +20,19 @@ def _get_client():
     # Get the dev-mode flag from the environment, better than passing the dev flag everywhere.
     dev_mode = os.getenv("MEORG_DEV_MODE", "0") == "1"
 
-    credentials = mcu.get_user_data_filepath('credentials.json')
-    credentials_dev = mcu.get_user_data_filepath('credentials-dev.json')
+    credentials = mcu.get_user_data_filepath("credentials.json")
+    credentials_dev = mcu.get_user_data_filepath("credentials-dev.json")
 
     # In dev mode and the configuration file exists
     if dev_mode and credentials_dev.is_file():
-        credentials = mcu.load_user_data('credentials-dev.json')
-    
+        credentials = mcu.load_user_data("credentials-dev.json")
+
     # In dev mode and it doesn't (i.e. Actions)
     elif dev_mode and not credentials_dev.is_file():
         credentials = dict(
-            email=os.getenv('MEORG_EMAIL'),
-            password=os.getenv('MEORG_PASSWORD')
+            email=os.getenv("MEORG_EMAIL"), password=os.getenv("MEORG_PASSWORD")
         )
-    
+
     # Production credentials
     else:
         credentials = mcu.load_user_data("credentials.json")
@@ -65,11 +63,10 @@ def _call(func, **kwargs):
     try:
         return func(**kwargs)
     except Exception as ex:
-        
         click.echo(ex.msg, err=True)
 
         # Bubble up the exception
-        if os.getenv('MEORG_DEV_MODE') == '1':
+        if os.getenv("MEORG_DEV_MODE") == "1":
             raise
 
         sys.exit(1)
@@ -86,7 +83,7 @@ def cli():
     pass
 
 
-@click.command('list')
+@click.command("list")
 def list_endpoints():
     """
     List the available endpoints for the server.
@@ -107,27 +104,8 @@ def list_endpoints():
             click.echo(out)
 
 
-@click.command('status')
-@click.argument("id")
-def file_status(id):
-    """
-    Check the file status based on the job ID from file-upload.
-
-    Prints the true file ID or a status.
-    """
-    client = _get_client()
-    response_data = _call(client.get_file_status, id=id).get("data")
-
-    # If the file is complete (transferred to object store), get the true ID
-    if response_data.get("status") == "complete":
-        file_id = response_data.get("files")[0].get("file")
-        click.echo(file_id)
-    else:
-        click.echo("Pending")
-
-
-@click.command('upload')
-@click.argument("file_path")
+@click.command("upload")
+@click.argument("file_path", nargs=-1)
 def file_upload(file_path):
     """
     Upload a file to the server.
@@ -137,12 +115,13 @@ def file_upload(file_path):
     client = _get_client()
 
     # Upload the file, get the job ID
-    response = _call(client.upload_file, file_path=file_path)
-    job_id = response.get("data").get("jobId")
-    click.echo(job_id)
+    response = _call(client.upload_files, files=list(file_path))
+    files = response.get("data").get("files")
+    for f in files:
+        click.echo(f.get("file"))
 
 
-@click.command('list')
+@click.command("list")
 @click.argument("id")
 def file_list(id):
     """
@@ -157,7 +136,7 @@ def file_list(id):
         click.echo(f)
 
 
-@click.command('attach')
+@click.command("attach")
 @click.argument("file_id")
 @click.argument("output_id")
 def file_attach(file_id, output_id):
@@ -166,12 +145,12 @@ def file_attach(file_id, output_id):
     """
     client = _get_client()
 
-    response = _call(client.attach_files_to_model_output, id=output_id, files=[file_id])
+    _ = _call(client.attach_files_to_model_output, id=output_id, files=[file_id])
 
     click.echo("SUCCESS")
 
 
-@click.command('start')
+@click.command("start")
 @click.argument("id")
 def analysis_start(id):
     """
@@ -188,7 +167,7 @@ def analysis_start(id):
         click.echo(analysis_id)
 
 
-@click.command('status')
+@click.command("status")
 @click.argument("id")
 def analysis_status(id):
     """
@@ -250,22 +229,24 @@ def initialise(dev=False):
 
 
 # Add groups for nested subcommands
-@click.group('endpoints', help='API endpoint commands.')
+@click.group("endpoints", help="API endpoint commands.")
 def cli_endpoints():
     pass
 
-@click.group('file', help='File commands.')
+
+@click.group("file", help="File commands.")
 def cli_file():
     pass
 
-@click.group('analysis', help='Analysis commands.')
+
+@click.group("analysis", help="Analysis commands.")
 def cli_analysis():
     pass
+
 
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
-cli_file.add_command(file_status)
 cli_file.add_command(file_attach)
 
 # Add endpoint commands

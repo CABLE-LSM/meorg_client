@@ -27,23 +27,25 @@ def test_file_upload(runner):
     assert result.exit_code == 0
 
     # Add the job_id to the store for the next test
-    store.set("job_id", result.output.strip())
+    store.set("file_id", result.output.strip())
 
     # Let it wait for a short while, allow the server to transfer to object store.
     time.sleep(5)
 
 
-def test_file_status(runner):
-    """Test file-status via CLI."""
+def test_file_multiple(runner):
+    """Test file-upload via CLI."""
 
-    # Get the file ID based on the job ID
-    job_id = store.get("job_id")
-    result = runner.invoke(cli.file_status, [job_id])
+    # Upload a tiny test file
+    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
+    result = runner.invoke(cli.file_upload, [filepath, filepath])
     assert result.exit_code == 0
-    assert result.output != "Pending"
 
-    # Add file_id to the store for the next test
-    store.set("file_id", result.output.strip())
+    # Add the job_id to the store for the next test
+    store.set("file_ids", result.output.strip())
+
+    # Let it wait for a short while, allow the server to transfer to object store.
+    time.sleep(5)
 
 
 def test_file_list(runner):
