@@ -1,27 +1,3 @@
-# MEORG-CLIENT
+# meorg_client
 
-## Usage
-
-### Authentication
-
-Authentication with the ME.org service requires a valid registration. In particular, the email address and password used to log into the dashboard.
-
-It is good practice to keep these details out of your scripts and set in environment variables as per the example below.
-
-```python
-import os
-from meorg_client import Client
-client = Client(
-    email=os.getenv('MEORG_EMAIL'),
-    password=os.getenv('MEORG_PASSWORD')
-)
-```
-
-The `client` object will now be authenticated and can be used to perform the various implemented functions.
-
-ME.org will invalidate any stale sessions after a time, however, to explicitly log out of the service, you can use the `logout` method on the client.
-
-```python
-# Log out of the service.
-client.logout()
-```
+The meorg_client (hereafter referred to as the Client) is a piece of software positioned between the [benchcab](https://github.com/CABLE-LSM/benchcab) testing framework and the [ModelEvaluation.org](https://modelevaluation.org) model evaluation service. The Client replaces the formerly manual process of uploading model output from benchcab to ModelEvaluation.org through the use of a Python library and command-line interface (CLI).
