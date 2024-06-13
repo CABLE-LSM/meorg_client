@@ -14,7 +14,7 @@ Credentials to the system are stored in the user home directory `$HOME/.meorg/cr
 
 The system will attempt to authenticate with modelevaluation.org, this will write the credentials file upon success. 
 
-> NOTE: This will overwrite any existing credentials.json
+> NOTE: This will overwrite any existing credentials.json.
 
 Alternatively, you can create a credentials file at the target filepath manually with a text editor in the following format:
 
@@ -42,7 +42,7 @@ Once credentials are set up and you have your `$MODEL_OUTPUT_ID`, you may use th
 A typical workflow interacting with the server is as follows:
 
 1. Set up your credentials as above.
-2. Take note of the `$MODEL_OUTPUT_ID` by visting the appropriate page on modelevaluation.org. For example: ME.org Home > Model Outputs > Owned by me > My Model. The trailing part of the URL is the `$MODEL_OUTPUT_ID`.
+2. Take note of the `$MODEL_OUTPUT_ID` by visting the appropriate page on modelevaluation.org. For example: ME.org Home > Model Outputs > Owned by me > My Model. The `$MODEL_OUTPUT_ID` will be listed at the top of the page.
 3. Upload an output file from your model run (i.e. benchcab), which puts the file in the queue to be transferred to the object store, which can be queried using the returned `$JOB_ID`.
 4. Periodically check the status of the transfer using the `$JOB_ID`, acquiring the true `$FILE_ID` upon completion.
 5. Attach the transferred file to a `$MODEL_OUTPUT_ID` using its `$FILE_ID`.
@@ -58,12 +58,9 @@ FILE_PATH=/path/to/file.nc
 MODEL_OUTPUT_ID=abcdef12345
 
 # Upload the file
-JOB_ID=$(meorg file upload $FILE_PATH)
+FILE_ID=$(meorg file upload $FILE_PATH)
 
 # ... some amount of time
-
-# Get the true file ID (inside the loop of your choice)
-FILE_ID=$(meorg file status $JOB_ID)
 
 # Attach the file to the model output
 meorg file attach $FILE_ID $MODEL_OUTPUT_ID
@@ -116,20 +113,6 @@ meorg file attach $FILE_ID $MODEL_OUTPUT_$ID
 
 Where `$FILE_ID` is the ID returned from `file-status` and `$MODEL_OUTPUT_ID` is the ID of the model output in question.
 
-### file status (deprecated)
-
-Given that a `file upload` puts a file in a queue to transfer to the object store, the file itself is not available for use until it has been successfully transferred. In order to check the status of this transfer, execute the following command:
-
-```shell
-meorg file status $JOB_ID
-```
-
-Where `$JOB_ID` is the ID returned from `file upload`.
-
-Once a file is listed as completed, the command will return the true `$FILE_ID` which can be used in `file-attach`.
-
-> NOTE: The file status command is likely to be deprecated in the near future.
-
 ### file upload
 
 To upload a file to the staging area of the server, execute the following command:
@@ -140,7 +123,7 @@ meorg file upload $PATH
 
 Where `$PATH` is the local path to the file.
 
-This command will return a `$JOB_ID` upon success, which can be used with `file status` to check the transfer status to the object store.
+This command will return a `$FILE_ID` upon success.
 
 ### initialise
 
@@ -155,4 +138,3 @@ meorg endpoints list
 ```
 
 This command will print a list of endpoints for the API for debugging purposes.
-

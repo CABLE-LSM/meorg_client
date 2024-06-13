@@ -1,29 +1,3 @@
-# API Client for ModelEvaluation.org (meorg_client)
+# meorg_client
 
-This is the repository for the Python client under development for interacting with the ME.org service.
-
-## Example usage
-
-```python
-# import the library
-from meorg_client.client import Client
-
-# Set some details
-base_url = 'https://modelevaluation.org/api'
-email = os.getenv('MEORG_EMAIL') # good practice
-password = os.getenv('MEORG_PASSWORD') # good practice
-
-# Instantiate the client and connect
-client = Client(
-    base_url=base_url,
-    email=email,
-    password=password
-)
-
-# ... interact with ME.org.
-```
-
-## COPYRIGHT 
-
-&copy; 2023 ACCESS-NRI and contributors. See the top-level COPYRIGHT file for details.
-SPDX-License-Identifier: Apache-2.0
+The meorg_client (hereafter referred to as the Client) is a piece of software positioned between the [benchcab](https://github.com/CABLE-LSM/benchcab) testing framework and the [ModelEvaluation.org](https://modelevaluation.org) model evaluation service. The Client replaces the formerly manual process of uploading model output from benchcab to ModelEvaluation.org through the use of a Python library and command-line interface (CLI).
