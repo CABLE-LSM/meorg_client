@@ -72,7 +72,9 @@ def _call(func, **kwargs):
         sys.exit(1)
 
 
-@click.group()
+@click.group(context_settings=dict(
+        help_option_names=['-h', '--help']
+))
 def cli():
     """
     ModelEvaluation.org client utility.
@@ -260,6 +262,7 @@ cli_analysis.add_command(analysis_status)
 cli.add_command(cli_endpoints)
 cli.add_command(cli_file)
 cli.add_command(cli_analysis)
+cli.add_command(initialise)
 
 
 if __name__ == "__main__":
