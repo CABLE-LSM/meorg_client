@@ -1,0 +1,17 @@
+name: meorg_client_dev
+
+channels:
+  - conda-forge
+  - accessnri
+  - coecms
+  - defaults
+
+dependencies:
+  - python=>3.9
+  - pip
+  - requests
+  - pytest
+  - black
+  - ruff
+  - pip:
+    - -r mkdocs-requirements.txt

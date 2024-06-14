@@ -75,6 +75,7 @@ def _call(func, **kwargs):
 @click.group(context_settings=dict(
         help_option_names=['-h', '--help']
 ))
+@click.version_option()
 def cli():
     """
     ModelEvaluation.org client utility.
