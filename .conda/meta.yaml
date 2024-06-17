@@ -1,0 +1,28 @@
+{% set data = load_setup_py_data() %}
+{% set version = data.get('version')  %}
+
+package:
+  name: meorg_client
+  version: {{ version }}
+
+source:
+    path: ..
+
+
+build:
+    script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
+    noarch: python
+    # number: {{ GIT_DESCRIBE_NUMBER }}
+
+
+requirements:
+    host:
+        - python >=3.9
+        - pip
+    run:
+        - python >=3.9
+        - requests
+
+test:
+  imports:
+    - meorg_client
