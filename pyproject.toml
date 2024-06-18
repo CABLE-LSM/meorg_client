@@ -1,3 +1,43 @@
+[project]
+
+# Metadata
+name = "meorg_client"
+description = "An API client for interacting with modelevaluation.org."
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache 2.0 License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: OS Independent"
+]
+readme = "README.md"
+license = {file="LICENSE"}
+
+# Get the version dynamicall (i.e. from git)
+dynamic = ["version"]
+
+# Dependencies
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "requests-mock>=1.11.0",
+    "PyYAML>=6.0.1",
+    "click>=8.1.7"
+]
+
+authors = [
+    {name = "ACCESS-NRI", email = "access.nri@anu.edu.au"}
+]
+
+[project.urls]
+source-code = "https://github.com/CABLE-LSM/meorg_client"
+
+# CLI
+[project.scripts]
+meorg = "meorg_client.cli:cli"
+
+
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
@@ -5,5 +45,8 @@ requires = [
   "setuptools-scm>=7",
 ]
 
+[tool.setuptools]
+packages = ["meorg_client"]
+
 [tool.setuptools_scm]
-fallback_version = "0.1.0"
+fallback_version = "0.0.0"
