@@ -12,7 +12,7 @@ source:
 build:
     script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
     noarch: python
-    # number: {{ GIT_DESCRIBE_NUMBER }}
+    number: {{ GIT_DESCRIBE_NUMBER }}
 
 
 requirements:
