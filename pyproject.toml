@@ -14,7 +14,7 @@ classifiers = [
 readme = "README.md"
 license = {file="LICENSE"}
 
-# Get the version dynamicall (i.e. from git)
+# Get the version dynamically (i.e. from git)
 dynamic = ["version"]
 
 # Dependencies
@@ -41,12 +41,15 @@ meorg = "meorg_client.cli:cli"
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-  "setuptools>=42",
-  "setuptools-scm>=7",
+  "setuptools>=64",
+  "setuptools-scm>=8",
 ]
 
 [tool.setuptools]
 packages = ["meorg_client"]
 
+[tool.setuptools.dynamic]
+version = {attr = "meorg_client.__version__"}
+
 [tool.setuptools_scm]
-fallback_version = "0.0.0"
+fallback_version = "9999"
