@@ -11,6 +11,7 @@ import time
 def runner():
     return CliRunner()
 
+
 def test_list_endpoints(runner):
     """Test list-endpoints via CLI."""
     result = runner.invoke(cli.list_endpoints)
