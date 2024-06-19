@@ -1,5 +1,5 @@
-{% set data = load_setup_py_data(setup_file='../setup.py') %}
-{% set version = data.get('version')  %}
+{% set data = load_setup_py_data() %}
+{% set version = data.get('version') %}
 
 package:
   name: meorg_client
@@ -20,7 +20,7 @@ requirements:
     - python >=3.9
     - pip
     - setuptools>=64
-    - versioneer[toml]==0.29
+    - versioneer
   run:
     - python >=3.9
     - requests >=2.31.0

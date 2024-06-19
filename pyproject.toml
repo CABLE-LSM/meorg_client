@@ -45,8 +45,11 @@ requires = [
   "versioneer[toml]==0.29"
 ]
 
-[tool.setuptools]
-packages = ["meorg_client"]
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.dynamic]
+version = {attr = "meorg_client.__version__"}
 
 # [tool.setuptools_scm]
 # fallback_version = "9999"
