@@ -1,26 +1,31 @@
+{% set data = load_setup_py_data(setup_file='../setup.py') %}
+{% set version = data.get('version')  %}
+
 package:
   name: meorg_client
-  version: {{ GIT_DESCRIBE_TAG }}
+  version: "{{ version }}"
 
 source:
-    path: ..
+  path: ..
 
 
 build:
-    script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
-    noarch: python
-    number: {{ GIT_DESCRIBE_NUMBER }}
+  noarch: python
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
 
 
 requirements:
-    host:
-        - python >=3.9
-        - pip
-    run:
-        - python >=3.9
-        - requests >=2.31.0
-        - click >=8.1.7
-        - PyYAML >=6.0.1
+  host:
+    - python >=3.9
+    - pip
+    - setuptools>=64
+    - versioneer[toml]==0.29
+  run:
+    - python >=3.9
+    - requests >=2.31.0
+    - click >=8.1.7
+    - PyYAML >=6.0.1
 
 test:
   imports:

@@ -1,5 +1,3 @@
 """Root init file."""
-from importlib.metadata import version
-
-# Version handle
-# __version__ = version('meorg_client')
+from . import _version
+__version__ = _version.get_versions()['version']

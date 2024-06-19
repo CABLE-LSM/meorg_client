@@ -42,14 +42,20 @@ meorg = "meorg_client.cli:cli"
 build-backend = "setuptools.build_meta"
 requires = [
   "setuptools>=64",
-  "setuptools-scm>=8",
+  "versioneer[toml]==0.29"
 ]
 
 [tool.setuptools]
 packages = ["meorg_client"]
 
-[tool.setuptools.dynamic]
-version = {attr = "meorg_client.__version__"}
+# [tool.setuptools_scm]
+# fallback_version = "9999"
+# # version = {attr = "meorg.__version__"}
 
-[tool.setuptools_scm]
-fallback_version = "9999"
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "meorg_client/_version.py"
+versionfile_build = "meorg_client/_version.py"
+tag_prefix = ""
+parentdir_prefix = "meorg_client-"

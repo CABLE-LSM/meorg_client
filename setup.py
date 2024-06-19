@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 from setuptools import setup
+import versioneer
 
-# setup(use_scm_version=dict(fallback_version="9999"))
-setup()
+setup(
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass()
+)
