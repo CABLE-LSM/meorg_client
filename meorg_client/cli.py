@@ -1,7 +1,9 @@
 """Command Line Interface"""
+
 import click
 from meorg_client.client import Client
 import meorg_client.utilities as mcu
+from meorg_client import __version__
 import os
 import sys
 import getpass
@@ -72,9 +74,8 @@ def _call(func, **kwargs):
         sys.exit(1)
 
 
-@click.group(context_settings=dict(
-        help_option_names=['-h', '--help']
-))
+@click.group(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.version_option(version=__version__)
 def cli():
     """
     ModelEvaluation.org client utility.

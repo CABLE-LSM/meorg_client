@@ -1,0 +1,64 @@
+[project]
+
+# Metadata
+name = "meorg_client"
+description = "An API client for interacting with modelevaluation.org."
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache 2.0 License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: OS Independent"
+]
+readme = "README.md"
+license = {file="LICENSE"}
+
+# Get the version dynamically (i.e. from git)
+dynamic = ["version"]
+
+# Dependencies
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "requests-mock>=1.11.0",
+    "PyYAML>=6.0.1",
+    "click>=8.1.7"
+]
+
+authors = [
+    {name = "ACCESS-NRI", email = "access.nri@anu.edu.au"}
+]
+
+[project.urls]
+source-code = "https://github.com/CABLE-LSM/meorg_client"
+
+# CLI
+[project.scripts]
+meorg = "meorg_client.cli:cli"
+
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=64",
+  "versioneer[toml]==0.29"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.dynamic]
+version = {attr = "meorg_client.__version__"}
+
+# [tool.setuptools_scm]
+# fallback_version = "9999"
+# # version = {attr = "meorg.__version__"}
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "meorg_client/_version.py"
+versionfile_build = "meorg_client/_version.py"
+tag_prefix = ""
+parentdir_prefix = "meorg_client-"

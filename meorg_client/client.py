@@ -1,4 +1,5 @@
 """Client object."""
+
 import requests
 import hashlib as hl
 import os
