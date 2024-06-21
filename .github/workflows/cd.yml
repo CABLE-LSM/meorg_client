@@ -23,6 +23,6 @@ jobs:
         with:
           python-version: '3.9'
           meta_yaml_dir: .conda
-          user: bschroeter
+          user: ${{ secrets.ANACONDA_USER }}
           label: main
-          token: ${{ secrets.ANACONDA_TOKEN_BEN }}
+          token: ${{ secrets.ANACONDA_TOKEN }}
