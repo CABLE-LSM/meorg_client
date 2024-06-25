@@ -1,3 +1,1 @@
-# meorg_client
-
-The meorg_client (hereafter referred to as the Client) is a piece of software positioned between the [benchcab](https://github.com/CABLE-LSM/benchcab) testing framework and the [ModelEvaluation.org](https://modelevaluation.org) model evaluation service. The Client replaces the formerly manual process of uploading model output from benchcab to ModelEvaluation.org through the use of a Python library and command-line interface (CLI).
+--8<-- "README.md"
