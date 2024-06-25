@@ -1,7 +1,24 @@
 site_name: meorg_client
 
-theme: material
+theme:
+  name: material
+  palette:
+    - scheme: light
+      primary: blue
+      accent: deep orange
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: deep orange
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
 
 plugins:
-- search
-- mkdocstrings
+  - search
+  - mkdocstrings
+
+markdown_extensions:
+  - pymdownx.snippets
