@@ -48,6 +48,15 @@ def test_file_multiple(runner):
     time.sleep(5)
 
 
+def test_file_upload_parallel(runner):
+    """Test file-upload via CLI."""
+
+    # Upload a tiny test file
+    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
+    result = runner.invoke(cli.file_upload_parallel, [filepath, filepath, "-n 2"])
+    assert result.exit_code == 0
+
+
 def test_file_list(runner):
     """Test file-list via CLI."""
     result = runner.invoke(cli.file_list, [store.get("model_output_id")])

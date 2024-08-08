@@ -124,6 +124,19 @@ def file_upload(file_path):
         click.echo(f.get("file"))
 
 
+@click.command("upload_parallel")
+@click.argument("file_paths", nargs=-1)
+@click.option(
+    "-n", default=2, help="Number of simultaneous parallel uploads (default=2)."
+)
+def file_upload_parallel(file_paths, n=2):
+    client = _get_client()
+    responses = _call(client.upload_files_parallel, files=list(file_paths), n=n)
+    print(responses)
+    for response in responses:
+        click.echo(response.get("data").get("files")[0].get("file"))
+
+
 @click.command("list")
 @click.argument("id")
 def file_list(id):
@@ -250,6 +263,7 @@ def cli_analysis():
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
+cli_file.add_command(file_upload_parallel)
 cli_file.add_command(file_attach)
 
 # Add endpoint commands

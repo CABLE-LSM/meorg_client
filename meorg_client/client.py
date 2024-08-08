@@ -12,6 +12,7 @@ import meorg_client.exceptions as mx
 import meorg_client.utilities as mu
 import mimetypes as mt
 from pathlib import Path
+from multiprocessing import Pool
 
 
 class Client:
@@ -215,6 +216,36 @@ class Client:
         if response.status_code == 200:
             self.headers.pop("X-User-Id", None)
             self.headers.pop("X-Auth-Token", None)
+
+    def upload_files_parallel(self, files: list, n: int = 2):
+        """Upload files in parallel.
+
+        Parameters
+        ----------
+        files : list
+            List of file paths.
+        n : int, optional
+            Number of threads to use, by default 2
+
+        Returns
+        -------
+        list
+            List of dicts or response objects from upload_files.
+        """
+
+        # Ensure the object is actually iterable
+        files = mu.ensure_list(files)
+
+        # Sequential case, single file provided
+        if len(files) == 1:
+            return self.upload_files(files)
+
+        # Do the parallel upload
+        responses = None
+        with Pool(processes=n) as pool:
+            responses = pool.map(self.upload_files, files)
+
+        return responses
 
     def upload_files(
         self,

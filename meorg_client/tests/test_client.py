@@ -144,6 +144,20 @@ def test_upload_file_large(client):
     assert client.success()
 
 
+def test_upload_file_parallel(client):
+    """Test the uploading of a file."""
+    # Upload the file.
+    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
+
+    # Upload the file
+    responses = client.upload_files_parallel([filepath, filepath], n=2)
+
+    # Make sure it worked
+    assert all(
+        [response.get("data").get("files")[0].get("file") for response in responses]
+    )
+
+
 def test_logout(client):
     """Test logout."""
     client.logout()
