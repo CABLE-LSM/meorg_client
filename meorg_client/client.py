@@ -9,6 +9,7 @@ from meorg_client.exceptions import RequestException
 import meorg_client.constants as mcc
 import meorg_client.endpoints as endpoints
 import meorg_client.exceptions as mx
+import meorg_client.utilities as mu
 import mimetypes as mt
 from pathlib import Path
 
@@ -217,14 +218,14 @@ class Client:
 
     def upload_files(
         self,
-        files,
+        files: Union[str, Path],
     ) -> Union[dict, requests.Response]:
         """Upload a file.
 
         Parameters
         ----------
-        files : path-like, readable or list
-            Path to the file, readable object, or a list containing either.
+        files : path-like, list
+            Path to the file, or a list containing paths.
 
         Returns
         -------
@@ -240,8 +241,7 @@ class Client:
         """
 
         # Cast as list for iterative upload
-        if not isinstance(files, list):
-            files = [files]
+        files = mu.ensure_list(files)
 
         # Prepare the files
         _files = list()
@@ -249,10 +249,6 @@ class Client:
             # Path-like
             if isinstance(f, (str, Path)) and os.path.isfile(f):
                 _files.append(open(f, "rb"))
-
-            # IO handle (i.e. open file or bytes)
-            elif f.readable() and hasattr(f, "name"):
-                _files.append(f)
 
             # Bail out
             else:
