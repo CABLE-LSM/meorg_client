@@ -68,3 +68,19 @@ def load_user_data(filename):
     raw = open(filepath, "r").read()
     ext = filename.split(".")[-1]
     return PACKAGE_DATA_DECODERS[ext](raw)
+
+
+def ensure_list(obj):
+    """Ensure that obj is a list.
+
+    Parameters
+    ----------
+    obj : mixed
+        Object of any type.
+
+    Returns
+    -------
+    list
+        The object as a list, if it is not already.
+    """
+    return obj if isinstance(obj, list) else [obj]
