@@ -40,6 +40,10 @@ def _get_authenticated_client():
     return client
 
 
+def _get_test_file():
+    return os.path.join(mu.get_installed_data_root(), "test/test.txt")
+
+
 @pytest.fixture
 def client():
     return _get_authenticated_client()
@@ -61,7 +65,7 @@ def test_list_endpoints(client):
 def test_upload_file(client):
     """Test the uploading of a file."""
     # Upload the file.
-    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
+    filepath = _get_test_file()
 
     # Upload the file
     response = client.upload_files(filepath)
@@ -89,7 +93,7 @@ def test_upload_file_multiple(client):
 
 
 def test_file_list(client):
-    """Test the listinf of files for a model output."""
+    """Test the list of files for a model output."""
     response = client.list_files(client._model_output_id)
     assert client.success()
     assert isinstance(response.get("data").get("files"), list)
@@ -141,6 +145,13 @@ def test_upload_file_large(client):
         # Upload and ensure it worked
         _ = client.upload_files(new_name)
 
+    assert client.success()
+
+
+def test_upload_files_with_attach(client):
+    """Test that the upload can also attach in the same method call."""
+    filepath = _get_test_file()
+    _ = client.upload_files([filepath, filepath], attach_to=client._model_output_id)
     assert client.success()
 
 

@@ -62,3 +62,13 @@ def test_file_attach(runner):
     )
 
     assert result.exit_code == 0
+
+
+def test_file_upload_with_attach(runner):
+    """Test file upload with attachment via CLI."""
+    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
+    model_output_id = store.get("model_output_id")
+    result = runner.invoke(
+        cli.file_upload, [filepath, filepath, "--attach_to", model_output_id]
+    )
+    assert result.exit_code == 0

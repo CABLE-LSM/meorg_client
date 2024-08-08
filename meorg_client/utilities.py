@@ -84,3 +84,20 @@ def ensure_list(obj):
         The object as a list, if it is not already.
     """
     return obj if isinstance(obj, list) else [obj]
+
+
+def get_uploaded_file_ids(response):
+    """Get the file ids out of the response object.
+
+    Parameters
+    ----------
+    response : dict
+        Response dictionary from a upload call.
+
+    Returns
+    -------
+    list
+        List of file ids.
+    """
+    file_ids = [f.get("file") for f in response.get("data").get("files")]
+    return file_ids

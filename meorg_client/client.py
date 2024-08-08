@@ -12,6 +12,7 @@ import meorg_client.exceptions as mx
 import meorg_client.utilities as mu
 import mimetypes as mt
 from pathlib import Path
+from multiprocessing import Pool
 
 
 class Client:
@@ -216,9 +217,40 @@ class Client:
             self.headers.pop("X-User-Id", None)
             self.headers.pop("X-Auth-Token", None)
 
+    def upload_files_parallel(self, files: list, n: int = 2):
+        """Upload files in parallel.
+
+        Parameters
+        ----------
+        files : list
+            List of file paths.
+        n : int, optional
+            Number of threads to use, by default 2
+
+        Returns
+        -------
+        list
+            List of dicts or response objects from upload_files.
+        """
+
+        # Ensure the object is actually iterable
+        files = mu.ensure_list(files)
+
+        # Sequential case, single file provided
+        if len(files) == 1:
+            return self.upload_files(files)
+
+        # Do the parallel upload
+        responses = None
+        with Pool(processes=n) as pool:
+            responses = pool.map(self.upload_files, files)
+
+        return responses
+
     def upload_files(
         self,
         files: Union[str, Path],
+        attach_to: str = None,
     ) -> Union[dict, requests.Response]:
         """Upload a file.
 
@@ -226,6 +258,8 @@ class Client:
         ----------
         files : path-like, list
             Path to the file, or a list containing paths.
+        attach_to : str, optional
+            Optional model_output_id to attach the files to, by default None
 
         Returns
         -------
@@ -277,6 +311,12 @@ class Client:
         # Close all the file descriptors (requests should do this, but just to be sure)
         for fd in payload:
             fd[1][1].close()
+
+        # Automatically attach to a model output
+        if attach_to:
+            response = self.attach_files_to_model_output(
+                attach_to, files=mu.get_uploaded_file_ids(response)
+            )
 
         return response
 
