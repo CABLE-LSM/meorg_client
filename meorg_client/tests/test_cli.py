@@ -8,22 +8,40 @@ import time
 
 
 @pytest.fixture
-def runner():
+def runner() -> CliRunner:
+    """Get a runner object.
+
+    Returns
+    -------
+    click.testing.CliRunner
+        Runner object.
+    """
     return CliRunner()
 
 
-def test_list_endpoints(runner):
+@pytest.fixture
+def test_filepath() -> str:
+    """Get a test filepath from the installation.
+
+    Returns
+    -------
+    str
+        Path to the test filepath.
+    """
+    return os.path.join(mu.get_installed_data_root(), "test/test.txt")
+
+
+def test_list_endpoints(runner: CliRunner):
     """Test list-endpoints via CLI."""
     result = runner.invoke(cli.list_endpoints)
     assert result.exit_code == 0
 
 
-def test_file_upload(runner):
+def test_file_upload(runner: CliRunner, test_filepath: str):
     """Test file-upload via CLI."""
 
     # Upload a tiny test file
-    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
-    result = runner.invoke(cli.file_upload, [filepath])
+    result = runner.invoke(cli.file_upload, [test_filepath])
     assert result.exit_code == 0
 
     # Add the job_id to the store for the next test
@@ -33,12 +51,11 @@ def test_file_upload(runner):
     time.sleep(5)
 
 
-def test_file_multiple(runner):
+def test_file_multiple(runner: CliRunner, test_filepath: str):
     """Test file-upload via CLI."""
 
     # Upload a tiny test file
-    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
-    result = runner.invoke(cli.file_upload, [filepath, filepath])
+    result = runner.invoke(cli.file_upload, [test_filepath, test_filepath])
     assert result.exit_code == 0
 
     # Add the job_id to the store for the next test
@@ -48,12 +65,13 @@ def test_file_multiple(runner):
     time.sleep(5)
 
 
-def test_file_upload_parallel(runner):
+def test_file_upload_parallel(runner: CliRunner, test_filepath: str):
     """Test file-upload via CLI."""
 
     # Upload a tiny test file
-    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
-    result = runner.invoke(cli.file_upload_parallel, [filepath, filepath, "-n 2"])
+    result = runner.invoke(
+        cli.file_upload_parallel, [test_filepath, test_filepath, "-n 2"]
+    )
     assert result.exit_code == 0
 
 

@@ -8,7 +8,7 @@ from conftest import store
 import tempfile as tf
 
 
-def _get_authenticated_client():
+def _get_authenticated_client() -> Client:
     """Get an authenticated client for tests.
 
     Returns
@@ -41,8 +41,20 @@ def _get_authenticated_client():
 
 
 @pytest.fixture
-def client():
+def client() -> Client:
     return _get_authenticated_client()
+
+
+@pytest.fixture
+def test_filepath() -> str:
+    """Get a test filepath from the installation.
+
+    Returns
+    -------
+    str
+        Path to the test filepath.
+    """
+    return os.path.join(mu.get_installed_data_root(), "test/test.txt")
 
 
 def test_login():
@@ -51,20 +63,17 @@ def test_login():
     assert "X-Auth-Token" in _client.headers.keys()
 
 
-def test_list_endpoints(client):
+def test_list_endpoints(client: Client):
     """Test list_endpoints."""
     response = client.list_endpoints()
     assert client.success()
     assert isinstance(response, dict)
 
 
-def test_upload_file(client):
+def test_upload_file(client: Client, test_filepath: str):
     """Test the uploading of a file."""
-    # Upload the file.
-    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
-
     # Upload the file
-    response = client.upload_files(filepath)
+    response = client.upload_files(test_filepath)
 
     # Make sure it worked
     assert client.success()
@@ -73,13 +82,11 @@ def test_upload_file(client):
     store.set("file_upload", response)
 
 
-def test_upload_file_multiple(client):
+def test_upload_file_multiple(client: Client, test_filepath: str):
     """Test the uploading of a file."""
-    # Upload the file.
-    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
 
     # Upload the file
-    response = client.upload_files([filepath, filepath])
+    response = client.upload_files([test_filepath, test_filepath])
 
     # Make sure it worked
     assert client.success()
@@ -88,14 +95,14 @@ def test_upload_file_multiple(client):
     store.set("file_upload_multiple", response)
 
 
-def test_file_list(client):
+def test_file_list(client: Client):
     """Test the listinf of files for a model output."""
     response = client.list_files(client._model_output_id)
     assert client.success()
     assert isinstance(response.get("data").get("files"), list)
 
 
-def test_attach_files_to_model_output(client):
+def test_attach_files_to_model_output(client: Client):
     # Get the file id from the job id
     file_id = store.get("file_upload").get("data").get("files")[0].get("file")
 
@@ -105,14 +112,14 @@ def test_attach_files_to_model_output(client):
     assert client.success()
 
 
-def test_start_analysis(client):
+def test_start_analysis(client: Client):
     """Test starting an analysis."""
     response = client.start_analysis(client._model_output_id)
     assert client.success()
     store.set("start_analysis", response)
 
 
-def test_get_analysis_status(client):
+def test_get_analysis_status(client: Client):
     """Test getting the analysis status."""
     # Get the analysis id from the store
     analysis_id = store.get("start_analysis").get("data").get("analysisId")
@@ -121,7 +128,7 @@ def test_get_analysis_status(client):
 
 
 @pytest.mark.xfail(strict=False)
-def test_upload_file_large(client):
+def test_upload_file_large(client: Client):
     """Test the uploading of a large-ish file."""
 
     # Create an in-memory 10mb file
@@ -144,13 +151,10 @@ def test_upload_file_large(client):
     assert client.success()
 
 
-def test_upload_file_parallel(client):
+def test_upload_file_parallel(client: Client, test_filepath: str):
     """Test the uploading of a file."""
-    # Upload the file.
-    filepath = os.path.join(mu.get_installed_data_root(), "test/test.txt")
-
     # Upload the file
-    responses = client.upload_files_parallel([filepath, filepath], n=2)
+    responses = client.upload_files_parallel([test_filepath, test_filepath], n=2)
 
     # Make sure it worked
     assert all(
@@ -158,7 +162,7 @@ def test_upload_file_parallel(client):
     )
 
 
-def test_logout(client):
+def test_logout(client: Client):
     """Test logout."""
     client.logout()
     assert "X-Auth-Token" not in client.headers.keys()
