@@ -128,7 +128,7 @@ class Client:
         # For flexibility
         return self.last_response
 
-    def _get_url(self, endpoint, **kwargs):
+    def _get_url(self, endpoint: str, **kwargs):
         """Get the well-formed URL for the call.
 
         Parameters
@@ -217,15 +217,15 @@ class Client:
             self.headers.pop("X-User-Id", None)
             self.headers.pop("X-Auth-Token", None)
 
-    def upload_files_parallel(self, files: list, n: int = 2):
+    def upload_files_parallel(self, files: Union[str, Path, list], n: int = 2):
         """Upload files in parallel.
 
         Parameters
         ----------
-        files : list
-            List of file paths.
+        files : Union[str, Path, list]
+            A path to a file, or a list of paths.
         n : int, optional
-            Number of threads to use, by default 2
+            Number of threads to use, by default 2.
 
         Returns
         -------
@@ -236,7 +236,7 @@ class Client:
         # Ensure the object is actually iterable
         files = mu.ensure_list(files)
 
-        # Sequential case, single file provided
+        # Single file provided, don't bother starting the pool
         if len(files) == 1:
             return self.upload_files(files)
 
@@ -419,7 +419,7 @@ class Client:
         """
         return self._make_request(method=mcc.HTTP_GET, endpoint=endpoints.ENDPOINT_LIST)
 
-    def success(self):
+    def success(self) -> bool:
         """Test if the last request was successful.
 
         Returns

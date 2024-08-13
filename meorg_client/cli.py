@@ -11,7 +11,7 @@ from pathlib import Path
 import json
 
 
-def _get_client():
+def _get_client() -> Client:
     """Get an authenticated client.
 
     Returns
@@ -45,7 +45,7 @@ def _get_client():
     )
 
 
-def _call(func, **kwargs):
+def _call(func: callable, **kwargs) -> dict:
     """Simple wrapper to handle exceptions.
 
     Exceptions are captured broadly and raw error message printed before non-zero exit.
@@ -136,9 +136,30 @@ def file_upload(file_path, attach_to=None):
         click.echo("SUCCESS")
 
 
+@click.command("upload_parallel")
+@click.argument("file_paths", nargs=-1)
+@click.option(
+    "-n", default=2, help="Number of simultaneous parallel uploads (default=2)."
+)
+def file_upload_parallel(file_paths: tuple, n: int = 2):
+    """Upload files in parallel.
+
+    Parameters
+    ----------
+    file_paths : tuple
+        Sequence of file paths.
+    n : int, optional
+        Number of parallel uploads, by default 2
+    """
+    client = _get_client()
+    responses = _call(client.upload_files_parallel, files=list(file_paths), n=n)
+    for response in responses:
+        click.echo(response.get("data").get("files")[0].get("file"))
+
+
 @click.command("list")
 @click.argument("id")
-def file_list(id):
+def file_list(id: str):
     """
     List the files currently attached to a model output.
 
@@ -154,7 +175,7 @@ def file_list(id):
 @click.command("attach")
 @click.argument("file_id")
 @click.argument("output_id")
-def file_attach(file_id, output_id):
+def file_attach(file_id: str, output_id: str):
     """
     Attach a file to a model output.
     """
@@ -167,7 +188,7 @@ def file_attach(file_id, output_id):
 
 @click.command("start")
 @click.argument("id")
-def analysis_start(id):
+def analysis_start(id: str):
     """
     Start the analysis for the model output id.
 
@@ -184,7 +205,7 @@ def analysis_start(id):
 
 @click.command("status")
 @click.argument("id")
-def analysis_status(id):
+def analysis_status(id: str):
     """
     Get the status of the analysis.
 
@@ -211,7 +232,7 @@ def analysis_status(id):
 @click.option(
     "--dev", is_flag=True, default=False, help="Setup for the development server."
 )
-def initialise(dev=False):
+def initialise(dev: bool = False):
     """
     Initialise the client on the system.
     """
@@ -228,7 +249,7 @@ def initialise(dev=False):
         click.echo(ex.msg, err=True)
         sys.exit(1)
 
-    print("Connection established.")
+    click.echo("Connection established.")
 
     # Build out the dictionary and save it to the user home.
     credentials = dict(email=email, password=password)
@@ -262,6 +283,7 @@ def cli_analysis():
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
+cli_file.add_command(file_upload_parallel)
 cli_file.add_command(file_attach)
 
 # Add endpoint commands
