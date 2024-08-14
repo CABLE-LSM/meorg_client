@@ -173,6 +173,19 @@ def test_upload_file_parallel(client: Client, test_filepath: str):
     )
 
 
+def test_upload_file_parallel_with_attach(client: Client, test_filepath: str):
+    """Test the uploading of a file with a model output ID to attach."""
+    # Upload the file
+    responses = client.upload_files_parallel(
+        [test_filepath, test_filepath], n=2, attach_to=client._model_output_id
+    )
+
+    # Make sure it worked
+    assert all(
+        [response.get("data").get("files")[0].get("file") for response in responses]
+    )
+
+
 def test_logout(client: Client):
     """Test logout."""
     client.logout()

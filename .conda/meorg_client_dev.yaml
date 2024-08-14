@@ -15,5 +15,6 @@ dependencies:
   - pytest
   - black
   - ruff
+  - pandas>=2.2.2
   - pip:
     - -r mkdocs-requirements.txt

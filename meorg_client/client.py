@@ -10,9 +10,9 @@ import meorg_client.constants as mcc
 import meorg_client.endpoints as endpoints
 import meorg_client.exceptions as mx
 import meorg_client.utilities as mu
+import meorg_client.parallel as meop
 import mimetypes as mt
 from pathlib import Path
-from multiprocessing import Pool
 
 
 class Client:
@@ -217,7 +217,9 @@ class Client:
             self.headers.pop("X-User-Id", None)
             self.headers.pop("X-Auth-Token", None)
 
-    def upload_files_parallel(self, files: Union[str, Path, list], n: int = 2):
+    def upload_files_parallel(
+        self, files: Union[str, Path, list], n: int = 2, attach_to: str = None
+    ):
         """Upload files in parallel.
 
         Parameters
@@ -226,6 +228,8 @@ class Client:
             A path to a file, or a list of paths.
         n : int, optional
             Number of threads to use, by default 2.
+        attach_to : str, optional
+            Module output id to attach to, by default None.
 
         Returns
         -------
@@ -242,8 +246,9 @@ class Client:
 
         # Do the parallel upload
         responses = None
-        with Pool(processes=n) as pool:
-            responses = pool.map(self.upload_files, files)
+        responses = meop.parallelise(
+            self.upload_files, n, files=files, attach_to=attach_to
+        )
 
         return responses
 
@@ -314,7 +319,8 @@ class Client:
 
         # Automatically attach to a model output
         if attach_to:
-            response = self.attach_files_to_model_output(
+
+            _ = self.attach_files_to_model_output(
                 attach_to, files=mu.get_uploaded_file_ids(response)
             )
 

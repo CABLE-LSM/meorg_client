@@ -141,7 +141,12 @@ def file_upload(file_path, attach_to=None):
 @click.option(
     "-n", default=2, help="Number of simultaneous parallel uploads (default=2)."
 )
-def file_upload_parallel(file_paths: tuple, n: int = 2):
+@click.option(
+    "--attach_to",
+    default=None,
+    help="Supply a model output id to immediately attach the file to.",
+)
+def file_upload_parallel(file_paths: tuple, n: int = 2, attach_to: str = None):
     """Upload files in parallel.
 
     Parameters
