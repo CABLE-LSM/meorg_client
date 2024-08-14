@@ -40,6 +40,10 @@ def _get_authenticated_client() -> Client:
     return client
 
 
+def _get_test_file():
+    return os.path.join(mu.get_installed_data_root(), "test/test.txt")
+
+
 @pytest.fixture
 def client() -> Client:
     return _get_authenticated_client()
@@ -151,10 +155,30 @@ def test_upload_file_large(client: Client):
     assert client.success()
 
 
+def test_upload_files_with_attach(client: Client):
+    """Test that the upload can also attach in the same method call."""
+    filepath = _get_test_file()
+    _ = client.upload_files([filepath, filepath], attach_to=client._model_output_id)
+    assert client.success()
+
+
 def test_upload_file_parallel(client: Client, test_filepath: str):
     """Test the uploading of a file."""
     # Upload the file
     responses = client.upload_files_parallel([test_filepath, test_filepath], n=2)
+
+    # Make sure it worked
+    assert all(
+        [response.get("data").get("files")[0].get("file") for response in responses]
+    )
+
+
+def test_upload_file_parallel_with_attach(client: Client, test_filepath: str):
+    """Test the uploading of a file with a model output ID to attach."""
+    # Upload the file
+    responses = client.upload_files_parallel(
+        [test_filepath, test_filepath], n=2, attach_to=client._model_output_id
+    )
 
     # Make sure it worked
     assert all(

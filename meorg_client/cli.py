@@ -109,19 +109,31 @@ def list_endpoints():
 
 @click.command("upload")
 @click.argument("file_path", nargs=-1)
-def file_upload(file_path: tuple):
+@click.option(
+    "--attach_to",
+    default=None,
+    help="Supply a model output id to immediately attach the file to.",
+)
+def file_upload(file_path, attach_to=None):
     """
     Upload a file to the server.
 
     Prints Job ID on success, which is used by file-status to check transfer status.
+
+    If attach_to is used then no ID is returned.
     """
     client = _get_client()
 
     # Upload the file, get the job ID
-    response = _call(client.upload_files, files=list(file_path))
-    files = response.get("data").get("files")
-    for f in files:
-        click.echo(f.get("file"))
+    response = _call(client.upload_files, files=list(file_path), attach_to=attach_to)
+
+    # Different logic if we are attaching to a model output immediately
+    if not attach_to:
+        files = response.get("data").get("files")
+        for f in files:
+            click.echo(f.get("file"))
+    else:
+        click.echo("SUCCESS")
 
 
 @click.command("upload_parallel")
@@ -129,7 +141,12 @@ def file_upload(file_path: tuple):
 @click.option(
     "-n", default=2, help="Number of simultaneous parallel uploads (default=2)."
 )
-def file_upload_parallel(file_paths: tuple, n: int = 2):
+@click.option(
+    "--attach_to",
+    default=None,
+    help="Supply a model output id to immediately attach the file to.",
+)
+def file_upload_parallel(file_paths: tuple, n: int = 2, attach_to: str = None):
     """Upload files in parallel.
 
     Parameters
