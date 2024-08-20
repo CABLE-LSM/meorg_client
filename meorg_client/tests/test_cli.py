@@ -108,3 +108,13 @@ def test_file_upload_parallel_with_attach(runner, test_filepath):
         [test_filepath, test_filepath, "--attach_to", model_output_id],
     )
     assert result.exit_code == 0
+
+
+def test_detach_all(runner):
+    """Test detaching all files from a model output."""
+    model_output_id = store.get("model_output_id")
+    result = runner.invoke(
+        cli.file_detach_all,
+        [model_output_id],
+    )
+    assert result.exit_code == 0

@@ -186,6 +186,17 @@ def test_upload_file_parallel_with_attach(client: Client, test_filepath: str):
     )
 
 
+def test_detach_all_files_from_model_output(client: Client):
+    """Test detaching all files from a model output."""
+
+    # Remove them all
+    _ = client.detach_all_files_from_model_output(client._model_output_id)
+    detached_files = client.list_files(client._model_output_id)
+
+    assert client.last_response.ok
+    assert len(detached_files.get("data").get("files")) == 0
+
+
 def test_logout(client: Client):
     """Test logout."""
     client.logout()
