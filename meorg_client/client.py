@@ -13,6 +13,7 @@ import meorg_client.utilities as mu
 import meorg_client.parallel as meop
 import mimetypes as mt
 from pathlib import Path
+from tqdm import tqdm
 
 
 class Client:
@@ -217,8 +218,12 @@ class Client:
             self.headers.pop("X-User-Id", None)
             self.headers.pop("X-Auth-Token", None)
 
-    def upload_files_parallel(
-        self, files: Union[str, Path, list], n: int = 2, attach_to: str = None
+    def _upload_files_parallel(
+        self,
+        files: Union[str, Path, list],
+        n: int = 2,
+        attach_to: str = None,
+        progress=True,
     ):
         """Upload files in parallel.
 
@@ -240,21 +245,61 @@ class Client:
         # Ensure the object is actually iterable
         files = mu.ensure_list(files)
 
-        # Single file provided, don't bother starting the pool
-        if len(files) == 1:
-            return self.upload_files(files)
-
         # Do the parallel upload
         responses = None
         responses = meop.parallelise(
-            self.upload_files, n, files=files, attach_to=attach_to
+            self._upload_file, n, files=files, attach_to=attach_to, progress=progress
         )
 
         return responses
 
     def upload_files(
         self,
-        files: Union[str, Path],
+        files: Union[str, Path, list],
+        n: int = 1,
+        attach_to: str = None,
+        progress=True,
+    ) -> list:
+        """Upload files.
+
+        Parameters
+        ----------
+        files : Union[str, Path, list]
+            A filepath, or a list of filepaths.
+        n : int, optional
+            Number of threads to parallelise over, by default 1
+        attach_to : str, optional
+            Model output ID to immediately attach to, by default None
+
+        Returns
+        -------
+        list
+            List of dicts
+        """
+
+        # Ensure the files are actually a list
+        files = mu.ensure_list(files)
+
+        # Just because someone will try to assign 0 threads...
+        if n >= 1 == False:
+            raise ValueError("Number of threads must be greater than or equal to 1.")
+
+        # Sequential upload
+        responses = list()
+        if n == 1:
+            for fp in tqdm(files, total=len(files)):
+                response = self._upload_file(fp, attach_to=attach_to)
+                responses.append(response)
+        else:
+            responses = self._upload_files_parallel(
+                files, n=n, attach_to=attach_to, progress=progress
+            )
+
+        return mu.ensure_list(responses)
+
+    def _upload_file(
+        self,
+        files: Union[str, Path, list],
         attach_to: str = None,
     ) -> Union[dict, requests.Response]:
         """Upload a file.
@@ -324,7 +369,7 @@ class Client:
                 attach_to, files=mu.get_uploaded_file_ids(response)
             )
 
-        return response
+        return mu.ensure_list(response)
 
     def list_files(self, id: str) -> Union[dict, requests.Response]:
         """Get a list of model outputs.
@@ -434,22 +479,3 @@ class Client:
             True if successful, False otherwise.
         """
         return self.last_response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
-
-    def is_initialised(self, dev=False) -> bool:
-        """Check if the client is initialised.
-
-        NOTE: This does not check the login actually works.
-
-        Parameters
-        ----------
-        dev : bool, optional
-            Use dev credentials, by default False
-
-        Returns
-        -------
-        bool
-            True if initialised, False otherwise.
-        """
-        cred_filename = "credentials.json" if not dev else "credentials-dev.json"
-        cred_filepath = mu.get_user_data_filepath(cred_filename)
-        return cred_filepath.exists()
