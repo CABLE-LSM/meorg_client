@@ -375,6 +375,30 @@ class Client:
             json=new_files,
         )
 
+    def detach_all_files_from_model_output(
+        self, id: str
+    ) -> Union[dict, requests.Response]:
+        """Detach all files from a model output.
+
+        Parameters
+        ----------
+        id : str
+            Model output ID.
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org
+        """
+
+        # Update the resource with an empty file list
+        return self._make_request(
+            mcc.HTTP_PATCH,
+            endpoint=endpoints.FILE_LIST,
+            url_params=dict(id=id),
+            json=[],
+        )
+
     def start_analysis(self, id: str) -> Union[dict, requests.Response]:
         """Start the analysis chain.
 

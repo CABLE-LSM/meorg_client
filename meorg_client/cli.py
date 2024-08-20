@@ -191,6 +191,21 @@ def file_attach(file_id: str, output_id: str):
     click.echo("SUCCESS")
 
 
+@click.command("detach_all")
+@click.argument("output_id")
+def file_detach_all(output_id: str):
+    """Detach all files from a model output.
+
+    Parameters
+    ----------
+    output_id : str
+        Model output ID.
+    """
+    client = _get_client()
+    _ = _call(client.detach_all_files_from_model_output, id=output_id)
+    click.echo("SUCCESS")
+
+
 @click.command("start")
 @click.argument("id")
 def analysis_start(id: str):
