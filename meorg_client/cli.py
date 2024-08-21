@@ -109,12 +109,13 @@ def list_endpoints():
 
 @click.command("upload")
 @click.argument("file_path", nargs=-1)
+@click.option("-n", default=1, help="Number of threads for parallel uploads.")
 @click.option(
     "--attach_to",
     default=None,
     help="Supply a model output id to immediately attach the file to.",
 )
-def file_upload(file_path, attach_to=None):
+def file_upload(file_path, n: int = 1, attach_to=None):
     """
     Upload a file to the server.
 
@@ -125,41 +126,23 @@ def file_upload(file_path, attach_to=None):
     client = _get_client()
 
     # Upload the file, get the job ID
-    response = _call(client.upload_files, files=list(file_path), attach_to=attach_to)
+    responses = _call(
+        client.upload_files,
+        files=list(file_path),
+        n=n,
+        attach_to=attach_to,
+        progress=True,
+    )
 
-    # Different logic if we are attaching to a model output immediately
-    if not attach_to:
+    for response in responses:
+
+        # For singular case
+        if n == 1:
+            response = response[0]
+
         files = response.get("data").get("files")
         for f in files:
             click.echo(f.get("file"))
-    else:
-        click.echo("SUCCESS")
-
-
-@click.command("upload_parallel")
-@click.argument("file_paths", nargs=-1)
-@click.option(
-    "-n", default=2, help="Number of simultaneous parallel uploads (default=2)."
-)
-@click.option(
-    "--attach_to",
-    default=None,
-    help="Supply a model output id to immediately attach the file to.",
-)
-def file_upload_parallel(file_paths: tuple, n: int = 2, attach_to: str = None):
-    """Upload files in parallel.
-
-    Parameters
-    ----------
-    file_paths : tuple
-        Sequence of file paths.
-    n : int, optional
-        Number of parallel uploads, by default 2
-    """
-    client = _get_client()
-    responses = _call(client.upload_files_parallel, files=list(file_paths), n=n)
-    for response in responses:
-        click.echo(response.get("data").get("files")[0].get("file"))
 
 
 @click.command("list")
@@ -303,7 +286,7 @@ def cli_analysis():
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
-cli_file.add_command(file_upload_parallel)
+# cli_file.add_command(file_upload_parallel)
 cli_file.add_command(file_attach)
 
 # Add endpoint commands

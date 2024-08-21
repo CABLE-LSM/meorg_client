@@ -45,7 +45,7 @@ def test_file_upload(runner: CliRunner, test_filepath: str):
     assert result.exit_code == 0
 
     # Add the job_id to the store for the next test
-    store.set("file_id", result.output.strip())
+    store.set("file_id", result.stdout.split()[-1].strip())
 
     # Let it wait for a short while, allow the server to transfer to object store.
     time.sleep(5)
@@ -63,16 +63,6 @@ def test_file_multiple(runner: CliRunner, test_filepath: str):
 
     # Let it wait for a short while, allow the server to transfer to object store.
     time.sleep(5)
-
-
-def test_file_upload_parallel(runner: CliRunner, test_filepath: str):
-    """Test file-upload via CLI."""
-
-    # Upload a tiny test file
-    result = runner.invoke(
-        cli.file_upload_parallel, [test_filepath, test_filepath, "-n 2"]
-    )
-    assert result.exit_code == 0
 
 
 def test_file_list(runner):
@@ -100,12 +90,20 @@ def test_file_upload_with_attach(runner, test_filepath):
     assert result.exit_code == 0
 
 
+def test_file_upload_parallel(runner: CliRunner, test_filepath: str):
+    """Test file-upload via CLI."""
+
+    # Upload a tiny test file
+    result = runner.invoke(cli.file_upload, [test_filepath, test_filepath, "-n", "2"])
+    assert result.exit_code == 0
+
+
 def test_file_upload_parallel_with_attach(runner, test_filepath):
     """Test file upload with attachment via CLI."""
     model_output_id = store.get("model_output_id")
     result = runner.invoke(
-        cli.file_upload_parallel,
-        [test_filepath, test_filepath, "--attach_to", model_output_id],
+        cli.file_upload,
+        [test_filepath, test_filepath, "-n", "2", "--attach_to", model_output_id],
     )
     assert result.exit_code == 0
 

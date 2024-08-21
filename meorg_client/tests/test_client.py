@@ -77,7 +77,7 @@ def test_list_endpoints(client: Client):
 def test_upload_file(client: Client, test_filepath: str):
     """Test the uploading of a file."""
     # Upload the file
-    response = client.upload_files(test_filepath)
+    response = client.upload_files(test_filepath)[0]
 
     # Make sure it worked
     assert client.success()
@@ -108,7 +108,7 @@ def test_file_list(client: Client):
 
 def test_attach_files_to_model_output(client: Client):
     # Get the file id from the job id
-    file_id = store.get("file_upload").get("data").get("files")[0].get("file")
+    file_id = store.get("file_upload")[0].get("data").get("files")[0].get("file")
 
     # Attach it to the model output
     _ = client.attach_files_to_model_output(client._model_output_id, [file_id])
@@ -165,7 +165,18 @@ def test_upload_files_with_attach(client: Client):
 def test_upload_file_parallel(client: Client, test_filepath: str):
     """Test the uploading of a file."""
     # Upload the file
-    responses = client.upload_files_parallel([test_filepath, test_filepath], n=2)
+    responses = client.upload_files([test_filepath, test_filepath], n=2, progress=True)
+
+    # Make sure it worked
+    assert all(
+        [response.get("data").get("files")[0].get("file") for response in responses]
+    )
+
+
+def test_upload_file_parallel_no_progress(client: Client, test_filepath: str):
+    """Test the uploading of a file."""
+    # Upload the file
+    responses = client.upload_files([test_filepath, test_filepath], n=2, progress=False)
 
     # Make sure it worked
     assert all(
@@ -176,7 +187,7 @@ def test_upload_file_parallel(client: Client, test_filepath: str):
 def test_upload_file_parallel_with_attach(client: Client, test_filepath: str):
     """Test the uploading of a file with a model output ID to attach."""
     # Upload the file
-    responses = client.upload_files_parallel(
+    responses = client.upload_files(
         [test_filepath, test_filepath], n=2, attach_to=client._model_output_id
     )
 

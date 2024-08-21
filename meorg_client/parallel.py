@@ -2,6 +2,7 @@
 
 import pandas as pd
 import multiprocessing as mp
+from tqdm import tqdm
 
 
 def _execute(mp_args: tuple):
@@ -31,7 +32,7 @@ def _convert_kwargs(**kwargs):
     return pd.DataFrame(kwargs).to_dict("records")
 
 
-def parallelise(func: callable, num_threads: int, **kwargs):
+def parallelise(func: callable, num_threads: int, progress=True, **kwargs):
     """Execute `func` in parallel over `num_threads`.
 
     Parameters
@@ -56,11 +57,22 @@ def parallelise(func: callable, num_threads: int, **kwargs):
     mp_args = [[func, mp_arg] for mp_arg in mp_args]
 
     # Start with empty results
-    results = None
+    results = list()
 
     # Establish a pool of workers (blocking)
     with mp.Pool(processes=num_threads) as pool:
-        results = pool.map(_execute, mp_args)
+
+        if progress:
+
+            with tqdm(total=len(mp_args)) as pbar:
+                for result in pool.map(_execute, mp_args):
+                    results.append(result[0])
+                    pbar.update()
+
+        else:
+
+            for result in pool.map(_execute, mp_args):
+                results.append(result[0])
 
     # Return the results
     return results
