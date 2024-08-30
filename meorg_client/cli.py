@@ -286,8 +286,9 @@ def cli_analysis():
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
-# cli_file.add_command(file_upload_parallel)
 cli_file.add_command(file_attach)
+cli_file.add_command(file_detach_all)
+
 
 # Add endpoint commands
 cli_endpoints.add_command(list_endpoints)
