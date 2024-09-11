@@ -291,9 +291,21 @@ class Client:
                 response = self._upload_file(fp, attach_to=attach_to)
                 responses.append(response)
         else:
+
+            # Disable the auto attach to avoid race condition
             responses = self._upload_files_parallel(
-                files, n=n, attach_to=attach_to, progress=progress
+                files, n=n, attach_to=None, progress=progress
             )
+
+            if attach_to:
+
+                file_ids = list()
+
+                for response in responses:
+                    file_id = response.get("data").get("files")[0].get("file")
+                    file_ids.append(file_id)
+
+                self.attach_files_to_model_output(id=attach_to, files=file_ids)
 
         return mu.ensure_list(responses)
 
@@ -503,3 +515,19 @@ class Client:
             True if successful, False otherwise.
         """
         return self.last_response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
+
+    def is_initialised(self, dev: bool = False) -> bool:
+        """Check if the client is initialised.
+        NOTE: This does not check the login actually works.
+        Parameters
+        ----------
+        dev : bool, optional
+            Use dev credentials, by default False
+        Returns
+        -------
+        bool
+            True if initialised, False otherwise.
+        """
+        cred_filename = "credentials.json" if not dev else "credentials-dev.json"
+        cred_filepath = mu.get_user_data_filepath(cred_filename)
+        return cred_filepath.exists()
