@@ -97,68 +97,19 @@
                 }
             }
         },
-        "/files": {
-            "post": {
-                "description": "Upload files to the object store. Size limit per file of 5GB, per request of 12 GB.",
+        "/modeloutput/{id}/start.json": {
+            "get": {
+                "description": "Get the JSON in text form that would be sent to the worker to start analysis.",
                 "tags": [
-                    "Utilities"
-                ],
-                "security": [
-                    {
-                        "userId": [],
-                        "authToken": []
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "type": "file",
-                                "format": "binary"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "202": {
-                        "description": "File has been received by server, and queued for upload to the object store",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "jobId": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/unauthorisedResponse"
-                    }
-                }
+                    "CI/CD"
+                ]
             }
         },
-        "/files/status/{id}": {
+        "/modeloutput/{id}/files": {
             "get": {
-                "description": "Get details on a files upload job. Only user who initiated the upload will be able to use this endpoint.",
+                "description": "Get full list of files associated with a model output",
                 "tags": [
-                    "Utilities"
+                    "Model Outputs"
                 ],
                 "security": [
                     {
@@ -171,9 +122,9 @@
                         "in": "path",
                         "name": "id",
                         "required": true,
+                        "description": "Model output id",
                         "schema": {
-                            "type": "string",
-                            "description": "jobId of files upload"
+                            "type": "string"
                         }
                     }
                 ],
@@ -182,32 +133,28 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
                                     "properties": {
                                         "status": {
                                             "type": "string",
-                                            "description": null,
                                             "example": "success"
                                         },
                                         "data": {
                                             "type": "object",
                                             "properties": {
-                                                "status": {
-                                                    "type": "string",
-                                                    "description": "When value is \"complete\", files exist on server - not necessarily uploaded to object store"
-                                                },
                                                 "files": {
-                                                    "type": "array",
+                                                    "type": "Array",
                                                     "items": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "fileId": {
+                                                            "id": {
                                                                 "type": "string",
-                                                                "description": "ID of file in database"
+                                                                "description": "ID of file in database",
+                                                                "example": "me5pq77uhy4bjR78R"
                                                             },
-                                                            "filename": {
+                                                            "name": {
                                                                 "type": "string",
-                                                                "description": "name of file that was uploaded"
+                                                                "description": "name of file that was uploaded",
+                                                                "example": "AU_dataset.nc"
                                                             }
                                                         }
                                                     }
@@ -229,11 +176,9 @@
                         "$ref": "#/components/notFound"
                     }
                 }
-            }
-        },
-        "/modeloutput/{id}/files": {
-            "get": {
-                "description": "Get list of file IDs associated with modeloutput",
+            },
+            "post": {
+                "description": "Upload a set of files to a model output. Requires owner permissions for the model output (or admin granted upload permissions). Size limit of 5 GB per file and 12GB per request.",
                 "tags": [
                     "Model Outputs"
                 ],
@@ -248,35 +193,64 @@
                         "in": "path",
                         "name": "id",
                         "required": true,
+                        "description": "Model output id",
                         "schema": {
-                            "type": "string",
-                            "description": "Modeloutput id"
+                            "type": "string"
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "file",
+                                "format": "binary"
+                            }
+                        }
+                    }
+                },
                 "responses": {
-                    "200": {
+                    "201": {
+                        "description": "File has been uploaded to the model output",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
                                     "properties": {
                                         "status": {
                                             "type": "string",
                                             "example": "success"
                                         },
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string",
-                                                "description": "file ID",
-                                                "example": "me5pq77uhy4bjR78R"
+                                            "type": "object",
+                                            "properties": {
+                                                "files": {
+                                                    "type": "Array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string",
+                                                                "description": "ID of file in database",
+                                                                "example": "me5pq77uhy4bjR78R"
+                                                            },
+                                                            "name": {
+                                                                "type": "string",
+                                                                "description": "name of file that was uploaded",
+                                                                "example": "AU_dataset.nc"
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "$ref": "#/components/invalidData"
                     },
                     "401": {
                         "$ref": "#/components/unauthenticated"
@@ -288,9 +262,11 @@
                         "$ref": "#/components/notFound"
                     }
                 }
-            },
-            "patch": {
-                "description": "Replace the model output files list. Role requirement - owner or 'delete any model output'",
+            }
+        },
+        "/modeloutput/{id}/files/{fileId}": {
+            "delete": {
+                "description": "Delete a specific file from a model output. Requires ownership of the modeloutput - i.e. be the creation user.",
                 "tags": [
                     "Model Outputs"
                 ],
@@ -305,27 +281,21 @@
                         "in": "path",
                         "name": "id",
                         "required": true,
+                        "description": "Model output ID",
                         "schema": {
-                            "type": "string",
-                            "description": "Modeloutput id"
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "fileId",
+                        "required": true,
+                        "description": "ID of file to be removed from model output",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "array",
-                                "items": {
-                                    "file": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
                         "content": {
@@ -338,17 +308,17 @@
                                             "example": "success"
                                         },
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string",
-                                                "description": "file ID",
-                                                "example": "me5pq77uhy4bjR78R"
-                                            }
+                                            "type": "string",
+                                            "nullable": true,
+                                            "example": null
                                         }
                                     }
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "$ref": "#/components/invalidData"
                     },
                     "401": {
                         "$ref": "#/components/unauthenticated"
@@ -364,7 +334,7 @@
         },
         "/modeloutput/{id}/start": {
             "put": {
-                "description": "Start analysis for given modeloutputs",
+                "description": "Start analysis for the model output",
                 "tags": [
                     "Model Outputs"
                 ],
@@ -379,9 +349,9 @@
                         "in": "path",
                         "name": "id",
                         "required": true,
+                        "description": "Model output id",
                         "schema": {
-                            "type": "string",
-                            "description": "Modeloutput id"
+                            "type": "string"
                         }
                     }
                 ],
@@ -423,11 +393,11 @@
                 }
             }
         },
-        "/modeloutput/{id}/status": {
+        "/analysis/{id}/status": {
             "get": {
-                "description": "Get progress of an analysis. Only user who started the analysis can view status.",
+                "description": "Get progress of an analysis. Only user who started the analysis can view status. Analysis ID is sourced from the /modeloutput/:id/start endpoint",
                 "tags": [
-                    "Model Outputs"
+                    "Analyses"
                 ],
                 "security": [
                     {
@@ -498,6 +468,26 @@
         }
     },
     "components": {
+        "noLogin": {
+            "description": "Endpoints require a user login",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "error"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "Unauthorised: no user supplied or incorrect credentials"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "notFound": {
             "description": "Resource does not exist",
             "content": {
@@ -516,6 +506,20 @@
                         }
                     }
                 }
+            }
+        },
+        "securitySchemes": {
+            "authToken": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Auth-Token",
+                "description": "Token from login call"
+            },
+            "userId": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-User-Id",
+                "description": "User ID from login call"
             }
         },
         "unauthorisedResponse": {
@@ -558,18 +562,29 @@
                 }
             }
         },
-        "securitySchemes": {
-            "authToken": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "X-Auth-Token",
-                "description": "Token from login call"
-            },
-            "userId": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "X-User-Id",
-                "description": "User ID from login call"
+        "invalidData": {
+            "description": "Data sent the the server is invalid. The data field will explicity identify the source of error",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "fail"
+                            },
+                            "data": {
+                                "type": "object",
+                                "properties": {
+                                    "field": {
+                                        "type": "string",
+                                        "example": "abc123"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     },

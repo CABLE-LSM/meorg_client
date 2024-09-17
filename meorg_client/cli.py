@@ -109,13 +109,9 @@ def list_endpoints():
 
 @click.command("upload")
 @click.argument("file_path", nargs=-1)
+@click.argument("id")
 @click.option("-n", default=1, help="Number of threads for parallel uploads.")
-@click.option(
-    "--attach_to",
-    default=None,
-    help="Supply a model output id to immediately attach the file to.",
-)
-def file_upload(file_path, n: int = 1, attach_to=None):
+def file_upload(file_path, id, n: int = 1):
     """
     Upload a file to the server.
 
@@ -130,7 +126,7 @@ def file_upload(file_path, n: int = 1, attach_to=None):
         client.upload_files,
         files=list(file_path),
         n=n,
-        attach_to=attach_to,
+        id=id,
         progress=True,
     )
 

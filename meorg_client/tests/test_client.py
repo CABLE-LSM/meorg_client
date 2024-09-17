@@ -6,6 +6,7 @@ from meorg_client.client import Client
 import meorg_client.utilities as mu
 from conftest import store
 import tempfile as tf
+import time
 
 
 def _get_authenticated_client() -> Client:
@@ -25,7 +26,7 @@ def _get_authenticated_client() -> Client:
     # Get the details from the environment.
     email = os.environ.get("MEORG_EMAIL")
     password = os.environ.get("MEORG_PASSWORD")
-    model_output_id = os.environ.get("MEORG_MODEL_OUTPUT_ID")
+    # model_output_id = os.environ.get("MEORG_MODEL_OUTPUT_ID")
 
     # Connect
     client = Client(email=email, password=password)
@@ -34,10 +35,12 @@ def _get_authenticated_client() -> Client:
     if None in [email, password, model_output_id, client.base_url]:
         raise TypeError("Test Secrets not set!!!")
 
-    # Attach the model output id for convenience in testing
-    client._model_output_id = model_output_id
-
     return client
+
+
+@pytest.fixture
+def model_output_id():
+    return os.environ.get("MEORG_MODEL_OUTPUT_ID")
 
 
 def _get_test_file():
@@ -74,10 +77,10 @@ def test_list_endpoints(client: Client):
     assert isinstance(response, dict)
 
 
-def test_upload_file(client: Client, test_filepath: str):
+def test_upload_file(client: Client, test_filepath: str, model_output_id: str):
     """Test the uploading of a file."""
     # Upload the file
-    response = client.upload_files(test_filepath)[0]
+    response = client.upload_files(test_filepath, id=model_output_id)[0]
 
     # Make sure it worked
     assert client.success()
@@ -86,11 +89,11 @@ def test_upload_file(client: Client, test_filepath: str):
     store.set("file_upload", response)
 
 
-def test_upload_file_multiple(client: Client, test_filepath: str):
+def test_upload_file_multiple(client: Client, test_filepath: str, model_output_id: str):
     """Test the uploading of a file."""
 
     # Upload the file
-    response = client.upload_files([test_filepath, test_filepath])
+    response = client.upload_files([test_filepath, test_filepath], model_output_id)
 
     # Make sure it worked
     assert client.success()
@@ -99,26 +102,19 @@ def test_upload_file_multiple(client: Client, test_filepath: str):
     store.set("file_upload_multiple", response)
 
 
-def test_file_list(client: Client):
+def test_file_list(client: Client, model_output_id: str):
     """Test the listinf of files for a model output."""
-    response = client.list_files(client._model_output_id)
+    response = client.list_files(model_output_id)
     assert client.success()
     assert isinstance(response.get("data").get("files"), list)
+    store.set("file_list", response)
 
 
-def test_attach_files_to_model_output(client: Client):
-    # Get the file id from the job id
-    file_id = store.get("file_upload")[0].get("data").get("files")[0].get("file")
-
-    # Attach it to the model output
-    _ = client.attach_files_to_model_output(client._model_output_id, [file_id])
-
-    assert client.success()
-
-
-def test_start_analysis(client: Client):
+def test_start_analysis(client: Client, model_output_id: str):
     """Test starting an analysis."""
-    response = client.start_analysis(client._model_output_id)
+    # Wait 5s for data to move from cache to store (otherwise analysis will fail)
+    time.sleep(5)
+    response = client.start_analysis(model_output_id)
     assert client.success()
     store.set("start_analysis", response)
 
@@ -150,62 +146,72 @@ def test_upload_file_large(client: Client):
         tmp.name = new_name
 
         # Upload and ensure it worked
-        _ = client.upload_files(new_name)
+        _ = client.upload_files(new_name, client._model_output_id)
 
     assert client.success()
 
 
-def test_upload_files_with_attach(client: Client):
-    """Test that the upload can also attach in the same method call."""
-    filepath = _get_test_file()
-    _ = client.upload_files([filepath, filepath], attach_to=client._model_output_id)
-    assert client.success()
-
-
-def test_upload_file_parallel(client: Client, test_filepath: str):
+def test_upload_file_parallel(client: Client, test_filepath: str, model_output_id: str):
     """Test the uploading of a file."""
-    # Upload the file
-    responses = client.upload_files([test_filepath, test_filepath], n=2, progress=True)
-
-    # Make sure it worked
-    assert all(
-        [response.get("data").get("files")[0].get("file") for response in responses]
-    )
-
-
-def test_upload_file_parallel_no_progress(client: Client, test_filepath: str):
-    """Test the uploading of a file."""
-    # Upload the file
-    responses = client.upload_files([test_filepath, test_filepath], n=2, progress=False)
-
-    # Make sure it worked
-    assert all(
-        [response.get("data").get("files")[0].get("file") for response in responses]
-    )
-
-
-def test_upload_file_parallel_with_attach(client: Client, test_filepath: str):
-    """Test the uploading of a file with a model output ID to attach."""
     # Upload the file
     responses = client.upload_files(
-        [test_filepath, test_filepath], n=2, attach_to=client._model_output_id
+        [test_filepath, test_filepath], id=model_output_id, n=2, progress=True
     )
 
     # Make sure it worked
     assert all(
-        [response.get("data").get("files")[0].get("file") for response in responses]
+        [response.get("data").get("files")[0].get("id") for response in responses]
     )
 
 
-def test_detach_all_files_from_model_output(client: Client):
-    """Test detaching all files from a model output."""
+def test_upload_file_parallel_no_progress(
+    client: Client, test_filepath: str, model_output_id: str
+):
+    """Test the uploading of a file."""
+    # Upload the file
+    responses = client.upload_files(
+        [test_filepath, test_filepath], id=model_output_id, n=2, progress=False
+    )
 
-    # Remove them all
-    _ = client.detach_all_files_from_model_output(client._model_output_id)
-    detached_files = client.list_files(client._model_output_id)
+    # Make sure it worked
+    assert all(
+        [response.get("data").get("files")[0].get("id") for response in responses]
+    )
 
-    assert client.last_response.ok
-    assert len(detached_files.get("data").get("files")) == 0
+
+def test_delete_file_from_model_output(client: Client, model_output_id: str):
+    "Test deleting a file from a model output."
+
+    file_id = store.get("file_upload")[0].get("data").get("files")[0].get("id")
+
+    # Get a list of the files from the model output
+    files = store.get("file_list")
+
+    file_ids = [f.get("id") for f in files.get("data").get("files")]
+
+    # Check that it is in there to begin with...
+    assert file_id in file_ids
+
+    client.delete_file_from_model_output(file_id=file_id, id=model_output_id)
+
+    # Get a fresh list
+    files = client.list_files(model_output_id)
+    file_ids = [f.get("id") for f in files.get("data").get("files")]
+    assert file_id not in file_ids
+
+
+def test_delete_all_files_from_model_output(client: Client, model_output_id: str):
+    """Test deleting all files from a model output."""
+
+    files = store.get("file_list")
+    file_ids = [f.get("id") for f in files.get("data").get("files")]
+
+    assert len(file_ids) > 0
+
+    client.delete_all_files_from_model_output(model_output_id)
+    files = client.list_files(model_output_id)
+    file_ids = [f.get("id") for f in files.get("data").get("files")]
+    assert len(file_ids) == 0
 
 
 def test_logout(client: Client):

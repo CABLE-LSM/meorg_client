@@ -9,9 +9,10 @@ LOGOUT = "logout"
 
 # Files
 FILE_LIST = "modeloutput/{id}/files"
-FILE_UPLOAD = "upload"
+FILE_UPLOAD = FILE_LIST
+FILE_DELETE = "modeloutput/{id}/files/{fileId}"
 FILE_STATUS = "files/status/{id}"
 
 # Analysis
 ANALYSIS_START = "modeloutput/{id}/start"
-ANALYSIS_STATUS = "modeloutput/{id}/status"
+ANALYSIS_STATUS = "analysis/{id}/status"

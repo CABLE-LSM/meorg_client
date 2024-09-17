@@ -221,8 +221,8 @@ class Client:
     def _upload_files_parallel(
         self,
         files: Union[str, Path, list],
+        id: str,
         n: int = 2,
-        attach_to: str = None,
         progress=True,
     ):
         """Upload files in parallel.
@@ -231,10 +231,10 @@ class Client:
         ----------
         files : Union[str, Path, list]
             A path to a file, or a list of paths.
+        id : str
+            Module output id to attach to, by default None.
         n : int, optional
             Number of threads to use, by default 2.
-        attach_to : str, optional
-            Module output id to attach to, by default None.
 
         Returns
         -------
@@ -248,16 +248,17 @@ class Client:
         # Do the parallel upload
         responses = None
         responses = meop.parallelise(
-            self._upload_file, n, files=files, attach_to=attach_to, progress=progress
+            self._upload_file, n, filepath=files, id=id, progress=progress
         )
 
+        # These should already be a list as per the parallelise function.
         return responses
 
     def upload_files(
         self,
         files: Union[str, Path, list],
+        id: str,
         n: int = 1,
-        attach_to: str = None,
         progress=True,
     ) -> list:
         """Upload files.
@@ -266,10 +267,11 @@ class Client:
         ----------
         files : Union[str, Path, list]
             A filepath, or a list of filepaths.
+        id : str
+            Model output ID to immediately attach to.
         n : int, optional
             Number of threads to parallelise over, by default 1
-        attach_to : str, optional
-            Model output ID to immediately attach to, by default None
+
 
         Returns
         -------
@@ -288,28 +290,27 @@ class Client:
         responses = list()
         if n == 1:
             for fp in tqdm(files, total=len(files)):
-                response = self._upload_file(fp, attach_to=attach_to)
+                response = self._upload_file(fp, id=id)
                 responses.append(response)
         else:
-            responses = self._upload_files_parallel(
-                files, n=n, attach_to=attach_to, progress=progress
+            responses += self._upload_files_parallel(
+                files, n=n, id=id, progress=progress
             )
 
-        return mu.ensure_list(responses)
+        # return mu.ensure_list(responses)
+        return responses
 
     def _upload_file(
-        self,
-        files: Union[str, Path, list],
-        attach_to: str = None,
+        self, filepath: Union[str, Path], id: str
     ) -> Union[dict, requests.Response]:
-        """Upload a file.
+        """Upload a single file.
 
         Parameters
         ----------
-        files : path-like, list
-            Path to the file, or a list containing paths.
-        attach_to : str, optional
-            Optional model_output_id to attach the files to, by default None
+        filepath : path-like
+            Path to the file
+        id : str
+            model_output_id to attach the files to
 
         Returns
         -------
@@ -319,55 +320,41 @@ class Client:
         Raises
         ------
         TypeError
-            When supplied file(s) are neither path-like nor readable.
+            When supplied file is neither path-like nor readable.
         FileNotFoundError
-            When supplied file(s) cannot be found.
+            When supplied file is cannot be found.
         """
 
-        # Cast as list for iterative upload
-        files = mu.ensure_list(files)
+        file_obj = None
 
-        # Prepare the files
-        _files = list()
-        for ix, f in enumerate(files):
-            # Path-like
-            if isinstance(f, (str, Path)) and os.path.isfile(f):
-                _files.append(open(f, "rb"))
+        if isinstance(filepath, (str, Path)) and os.path.isfile(filepath):
+            file_obj = open(filepath, "rb")
 
-            # Bail out
-            else:
-                dtype = type(f)
-                raise TypeError(
-                    f"File at index {ix} is neither path-like nor readable ({dtype})."
-                )
+        # Bail out
+        else:
+            dtype = type(f)
+            raise TypeError(f"File is neither path-like nor readable ({dtype}).")
 
         # Prepare the payload from the files
         payload = list()
 
-        for _f in _files:
-            filename = os.path.basename(_f.name)
-            ext = filename.split(".")[-1]
-            mimetype = mt.types_map[f".{ext}"]
-            payload.append(("file", (filename, _f, mimetype)))
+        filename = os.path.basename(file_obj.name)
+        ext = filename.split(".")[-1]
+        mimetype = mt.types_map[f".{ext}"]
+        payload.append(("file", (filename, file_obj, mimetype)))
 
         # Make the request
         response = self._make_request(
             method=mcc.HTTP_POST,
             endpoint=endpoints.FILE_UPLOAD,
             files=payload,
+            url_params=dict(id=id),
             return_json=True,
         )
 
         # Close all the file descriptors (requests should do this, but just to be sure)
         for fd in payload:
             fd[1][1].close()
-
-        # Automatically attach to a model output
-        if attach_to:
-
-            _ = self.attach_files_to_model_output(
-                attach_to, files=mu.get_uploaded_file_ids(response)
-            )
 
         return mu.ensure_list(response)
 
@@ -388,42 +375,29 @@ class Client:
             method=mcc.HTTP_GET, endpoint=endpoints.FILE_LIST, url_params=dict(id=id)
         )
 
-    def attach_files_to_model_output(
-        self, id: str, files: list
-    ) -> Union[dict, requests.Response]:
-        """Attach files to a model output.
+    def delete_file_from_model_output(self, id: str, file_id: str):
+        """Delete file from model output
 
         Parameters
         ----------
         id : str
             Model output ID.
-        files : list
-            List of file IDs.
+        file_id : str
+            File ID.
 
         Returns
         -------
-        Union[dict, requests.Response]
-            Response from ME.org.
+        Union[dict, requests.Request]
+            Response from ME.org
         """
-
-        # Get a list of files for the model output
-        current_files = self.list_files(id).get("data").get("files")
-
-        # Attach the new files to this list
-        new_files = current_files + files
-
-        # Update the resource
         return self._make_request(
-            mcc.HTTP_PATCH,
-            endpoint=endpoints.FILE_LIST,
-            url_params=dict(id=id),
-            json=new_files,
+            method=mcc.HTTP_DELETE,
+            endpoint=endpoints.FILE_DELETE,
+            url_params=dict(id=id, fileId=file_id),
         )
 
-    def detach_all_files_from_model_output(
-        self, id: str
-    ) -> Union[dict, requests.Response]:
-        """Detach all files from a model output.
+    def delete_all_files_from_model_output(self, id: str):
+        """Delete file from model output
 
         Parameters
         ----------
@@ -432,17 +406,22 @@ class Client:
 
         Returns
         -------
-        Union[dict, requests.Response]
+        Union[dict, requests.Request]
             Response from ME.org
         """
 
-        # Update the resource with an empty file list
-        return self._make_request(
-            mcc.HTTP_PATCH,
-            endpoint=endpoints.FILE_LIST,
-            url_params=dict(id=id),
-            json=[],
-        )
+        # Get a list of the files currently on the model output
+        files = self.list_files(id)
+        file_ids = [f.get("id") for f in files.get("data").get("files")]
+
+        responses = list()
+
+        # Do the delete one at a time
+        for file_id in file_ids:
+            response = self.delete_file_from_model_output(id=id, file_id=file_id)
+            responses.append(response)
+
+        return responses
 
     def start_analysis(self, id: str) -> Union[dict, requests.Response]:
         """Start the analysis chain.
