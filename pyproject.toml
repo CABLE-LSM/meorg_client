@@ -18,13 +18,14 @@ license = {file="LICENSE"}
 dynamic = ["version"]
 
 # Dependencies
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 dependencies = [
     "requests>=2.31.0",
     "requests-mock>=1.11.0",
     "PyYAML>=6.0.1",
     "click>=8.1.7",
-    "pandas>=2.2.2"
+    "pandas>=2.2.2",
+    "tqdm>=4.66.5"
 ]
 
 authors = [

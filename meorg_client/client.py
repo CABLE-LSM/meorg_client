@@ -482,3 +482,19 @@ class Client:
             True if successful, False otherwise.
         """
         return self.last_response.status_code in mcc.HTTP_STATUS_SUCCESS_RANGE
+
+    def is_initialised(self, dev: bool = False) -> bool:
+        """Check if the client is initialised.
+        NOTE: This does not check the login actually works.
+        Parameters
+        ----------
+        dev : bool, optional
+            Use dev credentials, by default False
+        Returns
+        -------
+        bool
+            True if initialised, False otherwise.
+        """
+        cred_filename = "credentials.json" if not dev else "credentials-dev.json"
+        cred_filepath = mu.get_user_data_filepath(cred_filename)
+        return cred_filepath.exists()
