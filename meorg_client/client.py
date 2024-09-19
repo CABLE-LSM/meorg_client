@@ -291,7 +291,7 @@ class Client:
         if n == 1:
             for fp in tqdm(files, total=len(files)):
                 response = self._upload_file(fp, id=id)
-                responses.append(response)
+                responses += response
         else:
             responses += self._upload_files_parallel(
                 files, n=n, id=id, progress=progress
