@@ -332,7 +332,7 @@ class Client:
 
         # Bail out
         else:
-            dtype = type(f)
+            dtype = type(file_obj)
             raise TypeError(f"File is neither path-like nor readable ({dtype}).")
 
         # Prepare the payload from the files
