@@ -109,13 +109,9 @@ def list_endpoints():
 
 @click.command("upload")
 @click.argument("file_path", nargs=-1)
+@click.argument("id")
 @click.option("-n", default=1, help="Number of threads for parallel uploads.")
-@click.option(
-    "--attach_to",
-    default=None,
-    help="Supply a model output id to immediately attach the file to.",
-)
-def file_upload(file_path, n: int = 1, attach_to=None):
+def file_upload(file_path, id, n: int = 1):
     """
     Upload a file to the server.
 
@@ -130,19 +126,15 @@ def file_upload(file_path, n: int = 1, attach_to=None):
         client.upload_files,
         files=list(file_path),
         n=n,
-        attach_to=attach_to,
+        id=id,
         progress=True,
     )
 
     for response in responses:
 
-        # For singular case
-        if n == 1:
-            response = response[0]
-
         files = response.get("data").get("files")
         for f in files:
-            click.echo(f.get("file"))
+            click.echo(f.get("id"))
 
 
 @click.command("list")
@@ -174,9 +166,9 @@ def file_attach(file_id: str, output_id: str):
     click.echo("SUCCESS")
 
 
-@click.command("detach_all")
+@click.command("delete_all")
 @click.argument("output_id")
-def file_detach_all(output_id: str):
+def file_delete_all(output_id: str):
     """Detach all files from a model output.
 
     Parameters
@@ -185,7 +177,23 @@ def file_detach_all(output_id: str):
         Model output ID.
     """
     client = _get_client()
-    _ = _call(client.detach_all_files_from_model_output, id=output_id)
+    _ = _call(client.delete_all_files_from_model_output, id=output_id)
+    click.echo("SUCCESS")
+
+
+@click.command("delete")
+@click.argument("output_id")
+@click.argument("file_id")
+def file_delete(output_id: str, file_id: str):
+    """Detach a file from a model output.
+
+    Parameters
+    ----------
+    output_id : str
+        Model output ID.
+    """
+    client = _get_client()
+    _ = _call(client.delete_file_from_model_output, id=output_id, file_id=file_id)
     click.echo("SUCCESS")
 
 
@@ -286,9 +294,8 @@ def cli_analysis():
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
-cli_file.add_command(file_attach)
-cli_file.add_command(file_detach_all)
-
+cli_file.add_command(file_delete)
+cli_file.add_command(file_delete_all)
 
 # Add endpoint commands
 cli_endpoints.add_command(list_endpoints)
