@@ -322,7 +322,7 @@ class Client:
         TypeError
             When supplied file is neither path-like nor readable.
         FileNotFoundError
-            When supplied file is cannot be found.
+            When supplied file cannot be found.
         """
 
         file_obj = None
