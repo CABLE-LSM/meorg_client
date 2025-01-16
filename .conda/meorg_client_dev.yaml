@@ -16,5 +16,6 @@ dependencies:
   - black
   - ruff
   - pandas>=2.2.2
+  - tqdm>=4.66.5
   - pip:
     - -r mkdocs-requirements.txt
