@@ -93,6 +93,30 @@ def test_list_endpoints(client: Client):
     assert isinstance(response, dict)
 
 
+def test_create_model_output(
+    client: Client, model_profile_id: str, experiment_id: str, model_output_name: str
+):
+    """Test Creation of Model output."""
+    response = client.model_output_create(
+        model_profile_id, experiment_id, model_output_name
+    )
+    assert client.success()
+
+    model_output_id = response.get("data").get("modeloutput")
+    assert model_output_id is not None
+
+    test_model_output_query(client, model_output_id)
+
+
+def test_model_output_query(client: Client, model_output_id: str):
+    """Test Existing Model output."""
+    response = client.model_output_query(model_output_id)
+    assert client.success()
+
+    response_model_output_data = response.get("data").get("modeloutput")
+    assert response_model_output_data.get("id") == model_output_id
+
+
 def test_upload_file(client: Client, test_filepath: str, model_output_id: str):
     """Test the uploading of a file.
 

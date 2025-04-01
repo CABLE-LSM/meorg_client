@@ -56,6 +56,32 @@ def test_list_endpoints(runner: CliRunner):
     assert result.exit_code == 0
 
 
+def test_create_model_output(
+    runner: CliRunner, model_profile_id, experiment_id, model_output_name
+):
+    """Test Creation of Model output."""
+    result = runner.invoke(
+        cli.create_new_model_output,
+        [model_profile_id, experiment_id, model_output_name],
+        standalone_mode=False,
+    )
+
+    assert result.exit_code == 0
+    assert type(result.return_value) is str  # The new model output
+
+    # Test newly created model_output_id
+    test_model_output_query(runner, result.return_value)
+
+
+def test_model_output_query(runner: CliRunner, model_output_id: str):
+    """Test Existing Model output."""
+    result = runner.invoke(
+        cli.model_output_query,
+        [model_output_id],
+    )
+    assert result.exit_code == 0
+
+
 def test_file_upload(runner: CliRunner, test_filepath: str, model_output_id: str):
     """Test file-upload via CLI.
 
