@@ -16,3 +16,7 @@ FILE_STATUS = "files/status/{id}"
 # Analysis
 ANALYSIS_START = "modeloutput/{id}/start"
 ANALYSIS_STATUS = "analysis/{id}/status"
+
+# Model Outputs
+MODEL_OUTPUT_CREATE = "modeloutput"
+MODEL_OUTPUT_QUERY = MODEL_OUTPUT_CREATE

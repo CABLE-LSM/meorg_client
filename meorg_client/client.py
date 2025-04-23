@@ -4,7 +4,7 @@ import requests
 import hashlib as hl
 import os
 from typing import Union
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 from meorg_client.exceptions import RequestException
 import meorg_client.constants as mcc
 import meorg_client.endpoints as endpoints
@@ -38,9 +38,7 @@ class Client:
         mt.init()
 
         # Dev mode can be set by the user or from the environment
-        dev_mode = dev_mode or os.getenv("MEORG_DEV_MODE", "0") == "1"
-
-        if dev_mode:
+        if dev_mode or mu.is_dev_mode():
             self.base_url = os.getenv("MEORG_BASE_URL_DEV", None)
         else:
             self.base_url = mcc.MEORG_BASE_URL_PROD
@@ -56,6 +54,7 @@ class Client:
         self,
         method: str,
         endpoint: str,
+        url_path_fields: dict = {},
         url_params: dict = {},
         data: dict = {},
         json: dict = {},
@@ -72,8 +71,10 @@ class Client:
             HTTP method.
         endpoint : str
             URL template for the API endpoint.
+        url_path_fields : dict, optional
+            Fields to interpolate into the URL template, by default {}
         url_params : dict, optional
-            Parameters to interpolate into the URL template, by default {}
+            Parameters to add at end of URL, by default {}
         data : dict, optional
             Data to send along with the request, by default {}
         json : dict, optional
@@ -106,7 +107,7 @@ class Client:
 
         # Get the function and URL
         func = getattr(requests, method.lower())
-        url = self._get_url(endpoint, **url_params)
+        url = self._get_url(endpoint, url_params, **url_path_fields)
 
         # Assemble the headers
         _headers = self._merge_headers(headers)
@@ -129,22 +130,29 @@ class Client:
         # For flexibility
         return self.last_response
 
-    def _get_url(self, endpoint: str, **kwargs):
+    def _get_url(self, endpoint: str, url_params: dict = {}, **url_path_fields: dict):
         """Get the well-formed URL for the call.
 
         Parameters
         ----------
         endpoint : str
             Endpoint to be appended to the base URL.
-        **kwargs :
-            Key/value pairs to interpolate into the URL template.
+        url_path_fields : dict, optional
+            Fields to interpolate into the URL template
+        url_params : dict, optional
+            Parameters to add at end of URL, by default {}
 
         Returns
         -------
         str
             URL.
         """
-        return urljoin(self.base_url + "/", endpoint).format(**kwargs)
+        # Add endpoint to base URL, interpolating url_path_fields
+        url_path = urljoin(self.base_url + "/", endpoint).format(**url_path_fields)
+        # Add URL parameters (if any)
+        if url_params:
+            url_path = f"{url_path}?{urlencode(url_params)}"
+        return url_path
 
     def _merge_headers(self, headers: dict = dict()):
         """Merge additional headers into the client headers (i.e. Auth)
@@ -348,7 +356,7 @@ class Client:
             method=mcc.HTTP_POST,
             endpoint=endpoints.FILE_UPLOAD,
             files=payload,
-            url_params=dict(id=id),
+            url_path_fields=dict(id=id),
             return_json=True,
         )
 
@@ -372,7 +380,9 @@ class Client:
             Response from ME.org.
         """
         return self._make_request(
-            method=mcc.HTTP_GET, endpoint=endpoints.FILE_LIST, url_params=dict(id=id)
+            method=mcc.HTTP_GET,
+            endpoint=endpoints.FILE_LIST,
+            url_path_fields=dict(id=id),
         )
 
     def delete_file_from_model_output(self, id: str, file_id: str):
@@ -393,7 +403,7 @@ class Client:
         return self._make_request(
             method=mcc.HTTP_DELETE,
             endpoint=endpoints.FILE_DELETE,
-            url_params=dict(id=id, fileId=file_id),
+            url_path_fields=dict(id=id, fileId=file_id),
         )
 
     def delete_all_files_from_model_output(self, id: str):
@@ -439,7 +449,51 @@ class Client:
         return self._make_request(
             method=mcc.HTTP_PUT,
             endpoint=endpoints.ANALYSIS_START,
-            url_params=dict(id=id),
+            url_path_fields=dict(id=id),
+        )
+
+    def model_output_create(
+        self, mod_prof_id: str, exp_id: str, name: str
+    ) -> Union[dict, requests.Response]:
+        """
+        Create a new model output entity
+        Parameters
+        ----------
+        mod_prof_id : str
+            Model Profile ID
+        exp_id : str
+            Experiment ID
+        name : str
+            Name of Model Output
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method=mcc.HTTP_POST,
+            endpoint=endpoints.MODEL_OUTPUT_CREATE,
+            data=dict(experiment=exp_id, model=mod_prof_id, name=name),
+        )
+
+    def model_output_query(self, model_id: str) -> Union[dict, requests.Response]:
+        """
+        Get details for a specific new model output entity
+        Parameters
+        ----------
+        model_id : str
+            Model Output ID
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method=mcc.HTTP_GET,
+            endpoint=endpoints.MODEL_OUTPUT_QUERY,
+            url_params=dict(id=model_id),
         )
 
     def get_analysis_status(self, id: str) -> Union[dict, requests.Response]:
@@ -458,7 +512,7 @@ class Client:
         return self._make_request(
             method=mcc.HTTP_GET,
             endpoint=endpoints.ANALYSIS_STATUS,
-            url_params=dict(id=id),
+            url_path_fields=dict(id=id),
         )
 
     def list_endpoints(self) -> Union[dict, requests.Response]:

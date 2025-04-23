@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Modelevaluation REST endpoints",
-        "version": "2.0.0"
+        "version": "2.1.0"
     },
     "servers": [
         {
@@ -41,15 +41,13 @@
                                         "description": "Account password"
                                     }
                                 }
-                            },
-                            "encoding": {
-                                "explode": false
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
+                        "description": "Generates API-key pair required for authentication",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -93,6 +91,427 @@
                 "responses": {
                     "200": {
                         "description": "Success"
+                    }
+                }
+            }
+        },
+        "/modeloutput": {
+            "get": {
+                "summary": "Retieve JSON representation from id or unique name",
+                "description": "Query by MO by id or by unique MO name",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "id",
+                        "description": "Model output id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "name",
+                        "description": "Name of model output",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Object may contain the following fields - \"id\", \"created\", \"modified\", \"state_selection\", \"parameter_selection\", \"comments\", \"is_bundle\", \"benchmarks\"",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "modeloutput": {
+                                                    "type": "object",
+                                                    "description": "JSON representation of the modeloutput",
+                                                    "example": {
+                                                        "id": "me5pq77uhy4bjR78",
+                                                        "name": "abc",
+                                                        "benchmarks": [
+                                                            "1",
+                                                            "2",
+                                                            "3"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create a new MO entity",
+                "description": "If model output name is existing, and belongs to the current user, the existing MO's id is returned",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "requestBody": {
+                    "description": "Experiment and Model IDs must be existing. Name length restricted to 50 characters",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "experiment",
+                                    "model",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "experiment": {
+                                        "type": "string",
+                                        "description": "The ID of the experiment"
+                                    },
+                                    "model": {
+                                        "type": "string",
+                                        "description": "The ID of the model profile. Note!!! Not to be confused with a model output."
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The name of the model output. Length of 50 max."
+                                    },
+                                    "state_selection": {
+                                        "type": "string",
+                                        "description": "One of \"default model initialisation\", \"model spinup on forcing data\", \"states derived directly from measurements\", or \"other\"",
+                                        "nullable": true
+                                    },
+                                    "parameter_selection": {
+                                        "type": "string",
+                                        "description": "One of \"automated calibration\", \"manual calibration\", or \"no calibration (model default values)\"",
+                                        "nullable": true
+                                    },
+                                    "comments": {
+                                        "type": "string",
+                                        "description": "Additional descriptions about the model output - e.g. configurations",
+                                        "nullable": true
+                                    },
+                                    "is_bundle": {
+                                        "type": "boolean",
+                                        "description": "Indicates if the model output is a bundle. If so, this model output will not be a benchmark option for other analyses",
+                                        "nullable": true
+                                    },
+                                    "benchmarks": {
+                                        "type": "array",
+                                        "description": "List of benchmarks associated with the model output. Benchmarks must be accessible from the associated experiment",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "nullable": true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contains the existing MO Id in data field. It will specify whether an existing record was returned or a new record created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "modeloutput": {
+                                                    "type": "string",
+                                                    "description": "modeloutput ID of created object",
+                                                    "example": "me5pq77uhy4bjR78R"
+                                                },
+                                                "created": {
+                                                    "type": "boolean",
+                                                    "description": "value indicates whether resource was existing or new",
+                                                    "example": false
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/invalidData"
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    }
+                }
+            }
+        },
+        "/modeloutput/{id}": {
+            "patch": {
+                "summary": "Update specific fields of an existing MO",
+                "description": "See schema below for detail on fields that may be edited. Note experiments cannot be edited via API.",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "description": "Model output id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Fields that are not included will remain unchanged",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The name of the model output. Length of 50 max.",
+                                        "nullable": true
+                                    },
+                                    "model": {
+                                        "type": "string",
+                                        "description": "The ID of the model profile. Note, not to be confused with a model output",
+                                        "nullable": true
+                                    },
+                                    "state_selection": {
+                                        "type": "string",
+                                        "description": "One of \"default model initialisation\", \"model spinup on forcing data\", \"states derived directly from measurements\", or \"other\"",
+                                        "nullable": true
+                                    },
+                                    "parameter_selection": {
+                                        "type": "string",
+                                        "description": "One of \"automated calibration\", \"manual calibration\", or \"no calibration (model default values)\"",
+                                        "nullable": true
+                                    },
+                                    "comments": {
+                                        "type": "string",
+                                        "description": "Additional descriptions about the model output - e.g. configurations",
+                                        "nullable": true
+                                    },
+                                    "is_bundle": {
+                                        "type": "boolean",
+                                        "description": "Indicates if the model output is a bundle. If so, this model output will not be a benchmark option for other analyses",
+                                        "nullable": true
+                                    },
+                                    "benchmarks": {
+                                        "type": "array",
+                                        "description": "List of benchmarks associated with the model output. Benchmarks must be accessible from the associated experiment",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "nullable": true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/invalidData"
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Remove a MO",
+                "description": "All unique data associated will be deleted - e.g. output files",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "description": "Model output id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/notFound"
+                    }
+                }
+            }
+        },
+        "/modeloutput/{id}/available-benchmarks": {
+            "get": {
+                "summary": "Retrieve related MOs which may be used as a benchmark",
+                "description": "Only model outputs that are used in the same experiment can be designated as a benchmark",
+                "tags": [
+                    "Model Outputs"
+                ],
+                "security": [
+                    {
+                        "userId": [],
+                        "authToken": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "description": "Model output id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns a list of MO ids that may be used as benchmarks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "benchmarks": {
+                                                    "type": "Array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "description": "modeloutput ID of available benchmark",
+                                                        "example": "me5pq77uhy4bjR78R"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/invalidData"
+                    },
+                    "401": {
+                        "$ref": "#/components/unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/unauthorisedResponse"
                     }
                 }
             }

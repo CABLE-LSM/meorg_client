@@ -3,7 +3,9 @@
 import click
 from meorg_client.client import Client
 import meorg_client.utilities as mcu
+import meorg_client.constants as mcc
 from meorg_client import __version__
+import json
 import os
 import sys
 import getpass
@@ -20,17 +22,16 @@ def _get_client() -> Client:
         Client object.
     """
     # Get the dev-mode flag from the environment, better than passing the dev flag everywhere.
-    dev_mode = os.getenv("MEORG_DEV_MODE", "0") == "1"
 
     credentials = mcu.get_user_data_filepath("credentials.json")
     credentials_dev = mcu.get_user_data_filepath("credentials-dev.json")
 
     # In dev mode and the configuration file exists
-    if dev_mode and credentials_dev.is_file():
+    if mcu.is_dev_mode() and credentials_dev.is_file():
         credentials = mcu.load_user_data("credentials-dev.json")
 
     # In dev mode and it doesn't (i.e. Actions)
-    elif dev_mode and not credentials_dev.is_file():
+    elif mcu.is_dev_mode() and not credentials_dev.is_file():
         credentials = dict(
             email=os.getenv("MEORG_EMAIL"), password=os.getenv("MEORG_PASSWORD")
         )
@@ -41,7 +42,9 @@ def _get_client() -> Client:
 
     # Get the client
     return Client(
-        email=credentials["email"], password=credentials["password"], dev_mode=dev_mode
+        email=credentials["email"],
+        password=credentials["password"],
+        dev_mode=mcu.is_dev_mode(),
     )
 
 
@@ -68,7 +71,7 @@ def _call(func: callable, **kwargs) -> dict:
         click.echo(ex.msg, err=True)
 
         # Bubble up the exception
-        if os.getenv("MEORG_DEV_MODE") == "1":
+        if mcu.is_dev_mode():
             raise
 
         sys.exit(1)
@@ -214,6 +217,72 @@ def analysis_start(id: str):
         click.echo(analysis_id)
 
 
+@click.command("create")
+@click.argument("mod_prof_id")
+@click.argument("exp_id")
+@click.argument("name")
+def create_new_model_output(mod_prof_id: str, exp_id: str, name: str):
+    """
+    Create a new model output profile.
+
+
+    Parameters
+    ----------
+    mod_prof_id : str
+        Model profile ID.
+
+    exp_id : str
+        Experiment ID.
+
+    name : str
+        New model output name
+
+    Prints modeloutput ID of created object, and whether it already existed or not.
+    """
+    client = _get_client()
+
+    response = _call(
+        client.model_output_create, mod_prof_id=mod_prof_id, exp_id=exp_id, name=name
+    )
+
+    if client.success():
+        model_output_id = response.get("data").get("modeloutput")
+        existing = response.get("data").get("existing")
+        click.echo(f"Model Output ID: {model_output_id}")
+        if existing is not None:
+            click.echo("Warning: Overwriting existing model output ID")
+    return model_output_id
+
+
+@click.command("query")
+@click.argument("model_id")
+def model_output_query(model_id: str):
+    """
+    Get details for a specific new model output entity
+
+    Parameters
+    ----------
+    model_id : str
+        Model Output ID.
+
+    Prints the `id` and `name` of the modeloutput, and JSON representation for the remaining metadata.
+    """
+    client = _get_client()
+
+    response = _call(client.model_output_query, model_id=model_id)
+
+    if client.success():
+
+        model_output_data = response.get("data").get("modeloutput")
+        model_output_id = model_output_data.get("id")
+        name = model_output_data.get("name")
+        if mcu.is_dev_mode():
+            click.echo(f"Model Output: {json.dumps(model_output_data, indent=4)}")
+        else:
+            click.echo(f"Model Output ID: {model_output_id}")
+            click.echo(f"Model Output Name: {name}")
+
+
 @click.command("status")
 @click.argument("id")
 def analysis_status(id: str):
@@ -291,6 +360,11 @@ def cli_analysis():
     pass
 
 
+@click.group("output", help="Model output commands.")
+def cli_model_output():
+    pass
+
+
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
@@ -304,11 +378,16 @@ cli_endpoints.add_command(list_endpoints)
 cli_analysis.add_command(analysis_start)
 cli_analysis.add_command(analysis_status)
 
+# Add output command
+cli_model_output.add_command(create_new_model_output)
+cli_model_output.add_command(model_output_query)
+
 # Add subparsers to the master
 cli.add_command(cli_endpoints)
 cli.add_command(cli_file)
 cli.add_command(cli_analysis)
 cli.add_command(initialise)
+cli.add_command(cli_model_output)
 
 
 if __name__ == "__main__":

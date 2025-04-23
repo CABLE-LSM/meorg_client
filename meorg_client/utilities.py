@@ -101,3 +101,7 @@ def get_uploaded_file_ids(response):
     """
     file_ids = [f.get("file") for f in response.get("data").get("files")]
     return file_ids
+
+
+def is_dev_mode():
+    return os.getenv("MEORG_DEV_MODE", "0") == "1"

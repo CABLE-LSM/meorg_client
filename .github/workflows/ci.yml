@@ -34,6 +34,9 @@ jobs:
         MEORG_EMAIL: ${{ secrets.MEORG_EMAIL }}
         MEORG_PASSWORD: ${{ secrets.MEORG_PASSWORD }}
         MEORG_MODEL_OUTPUT_ID: ${{ secrets.MEORG_MODEL_OUTPUT_ID }}
+        MEORG_MODEL_OUTPUT_NAME: ${{ secrets.MEORG_MODEL_OUTPUT_NAME}}
+        MEORG_MODEL_PROFILE_ID: ${{ secrets.MEORG_MODEL_PROFILE_ID }}
+        MEORG_EXPERIMENT_ID: ${{ secrets.MEORG_EXPERIMENT_ID }}
       run: |
         conda install pytest
         pytest -v

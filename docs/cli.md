@@ -93,6 +93,39 @@ modelevaluation.org/modelOutput/display/**kafS53HgWu2CDXxgC**
 
 This command will return an `$ANALYSIS_ID` upon success which is used in `analysis status`.
 
+### model output create
+
+To create a model output, execute the following command:
+
+```shell
+meorg output create $MODEL_PROFILE_ID $EXPERIMENT_ID $MODEL_OUTPUT_NAME
+```
+
+Where `$MODEL_PROFILE_ID` and `$EXPERIMENT_ID` are found on the model profile and corresponding experiment details pages on modelevaluation.org. `$MODEL_OUTPUT_NAME` is a unique name for the newly created model output.
+
+This command will return the newly created `$MODEL_OUTPUT_ID` upon success which is used for further analysis. It will also print whether an existing model output record was overwritten.
+
+### model output query
+
+Retrieve Model output details via `$MODEL_OUTPUT_ID`
+
+```shell
+meorg output query $MODEL_OUTPUT_ID
+```
+
+This command will print the `id` and `name` of the modeloutput. If developer mode is enabled, print the JSON representation for the model output with metadata. An example model output data response would be:
+
+```json
+{
+    "id": "MnCj3tMzGx3NsuzwS",
+    "name": "temp-output",
+    "created": "2025-04-04T00:09:44.258Z",
+    "modified": "2025-04-17T05:12:08.135Z",
+    "stateSelection": "default model initialisation",
+    "benchmarks": []
+}
+```
+
 ### analysis status
 
 To query the status of an analysis, execute the following command:
