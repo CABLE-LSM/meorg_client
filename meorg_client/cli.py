@@ -201,30 +201,88 @@ def file_delete(output_id: str, file_id: str):
 
 
 @click.command("start")
-@click.argument("id")
-def analysis_start(id: str):
+@click.argument("model_output_id")
+@click.argument("experiment_id")
+def analysis_start(model_output_id: str, experiment_id: str):
     """
-    Start the analysis for the model output id.
+    Start the analysis for the model output id, and an associated experiment ID.
 
     Prints the Analysis ID, which can be used in analysis-status.
     """
     client = _get_client()
 
-    response = _call(client.start_analysis, id=id)
+    response = _call(
+        client.start_analysis,
+        model_output_id=model_output_id,
+        experiment_id=experiment_id,
+    )
 
     if client.success():
         analysis_id = response.get("data").get("analysisId")
         click.echo(analysis_id)
 
 
+def _generate_model_output_config(
+    state_selection: str, parameter_selection: str, comments: str, is_bundle: bool
+):
+    state_sel_dict = {
+        "default": "default model initialisation",
+        "spinup": "model spinup on forcing data",
+        "measurements": "states derived directly from measurements",
+        "other": "other",
+    }
+
+    param_sel_dict = {
+        "automated": "automated calibration",
+        "manual": "manual calibration",
+        "none": "no calibration (model default values)",
+    }
+
+    config_params = {
+        "state_selection": state_sel_dict.get(state_selection),
+        "parameter_selection": param_sel_dict.get(parameter_selection),
+        "comments": comments,
+        "is_bundle": is_bundle,
+    }
+    config_params = {k: v for k, v in config_params.items() if v}
+
+    return config_params
+
+
 @click.command("create")
 @click.argument("mod_prof_id")
-@click.argument("exp_id")
 @click.argument("name")
-def create_new_model_output(mod_prof_id: str, exp_id: str, name: str):
+@click.option(
+    "--state-selection",
+    type=click.Choice(["default", "spinup", "measurements", "other"]),
+    help="",
+)
+@click.option(
+    "--parameter-selection",
+    type=click.Choice(["automated", "manual", "none"]),
+    help="",
+)
+@click.option(
+    "--comments",
+    type=str,
+    help="",
+)
+@click.option(
+    "--is-bundle",
+    is_flag=True,
+    default=False,
+    help="",
+)
+def create_new_model_output(
+    mod_prof_id: str,
+    name: str,
+    state_selection: str,
+    parameter_selection: str,
+    comments: str,
+    is_bundle: bool,
+):
     """
     Create a new model output profile.
-
 
     Parameters
     ----------
@@ -237,12 +295,24 @@ def create_new_model_output(mod_prof_id: str, exp_id: str, name: str):
     name : str
         New model output name
 
+    state_selection : str
+        Maps to one of "default model initialisation", "model spinup on forcing data",
+        "states derived directly from measurements", or "other"
+    parameter_selection : str
+        Maps to one of "automated calibration", "manual calibration", or
+        "no calibration (model default values)"
+    comments : str
+        Additional Info on Model output
+    is_bundle : bool
+        Indicates if the model output is a bundle
     Prints modeloutput ID of created object, and whether it already existed or not.
     """
     client = _get_client()
-
+    config_params = _generate_model_output_config(
+        state_selection, parameter_selection, comments, is_bundle
+    )
     response = _call(
-        client.model_output_create, mod_prof_id=mod_prof_id, exp_id=exp_id, name=name
+        client.model_output_create, mod_prof_id=mod_prof_id, name=name, **config_params
     )
 
     if client.success():
@@ -265,7 +335,8 @@ def model_output_query(model_id: str):
     model_id : str
         Model Output ID.
 
-    Prints the `id` and `name` of the modeloutput, and JSON representation for the remaining metadata.
+
+    Prints the `id` modeloutput, and JSON representation for the remaining metadata if in dev mode.
     """
     client = _get_client()
 
@@ -273,14 +344,237 @@ def model_output_query(model_id: str):
 
     if client.success():
 
-        model_output_data = response.get("data").get("modeloutput")
-        model_output_id = model_output_data.get("id")
-        name = model_output_data.get("name")
+        model_output_id = response.get("data").get("modeloutput").get("id")
+        click.echo(model_output_id)
+
+
+def _parse_csv(ctx, param, value):
+    if not value:
+        return []
+
+    return value.split(",")
+
+
+@click.command("update")
+@click.argument("model_output_id")
+@click.option(
+    "--name",
+    type=str,
+    help="",
+)
+@click.option(
+    "--model-profile-id",
+    type=str,
+    help="",
+)
+@click.option(
+    "--state-selection",
+    type=click.Choice(["default", "spinup", "measurements", "other"]),
+    help="",
+)
+@click.option(
+    "--parameter-selection",
+    type=click.Choice(["automated", "manual", "none"]),
+    help="",
+)
+@click.option(
+    "--comments",
+    type=str,
+    help="",
+)
+@click.option(
+    "--is-bundle",
+    is_flag=True,
+    default=False,
+    help="",
+)
+def model_output_update(
+    model_output_id: str,
+    name: str,
+    model_profile_id: str,
+    state_selection: str,
+    parameter_selection: str,
+    comments: str,
+    is_bundle: bool,
+):
+    """
+
+    Update specific fields of an existing model output.
+
+    Parameters
+    ----------
+    model_output_id : str
+        Model Output ID
+    name : str
+        Model Output Name
+    model_profile_id : str
+        Model Profile ID
+    state_selection : str
+        Maps to one of "default model initialisation", "model spinup on forcing data",
+        "states derived directly from measurements", or "other"
+    parameter_selection : str
+        Maps to one of "automated calibration", "manual calibration", or
+        "no calibration (model default values)"
+    comments : str
+        Additional Info on Model output
+    is_bundle : bool
+        Indicates if the model output is a bundle
+    """
+    client = _get_client()
+
+    updated_fields = {
+        "name": name,
+        "model": model_profile_id,
+    } | _generate_model_output_config(
+        state_selection, parameter_selection, comments, is_bundle
+    )
+
+    # Remove unpassed params to CLI
+    updated_fields = {k: v for k, v in updated_fields.items() if v}
+
+    _ = _call(
+        client.model_output_update,
+        model_id=model_output_id,
+        updated_fields=updated_fields,
+    )
+
+    if client.success():
+        click.echo("Parameters of MO updated")
+
+
+@click.command("list")
+@click.argument("model_output_id")
+@click.argument("exp_id")
+def model_output_benchmarks_list(model_output_id: str, exp_id: str):
+    """List model benchmarks.
+
+    Parameters
+    ----------
+    model_output_id : str
+        Model output ID
+    exp_id : str
+        Experiment ID
+    """
+    client = _get_client()
+    response = _call(
+        client.model_output_benchmarks_list,
+        model_id=model_output_id,
+        exp_id=exp_id,
+    )
+
+    if client.success():
+        click.echo(
+            f"List of available benchmarks: {json.dumps(response.get('data').get('benchmarks'), indent=4)}"
+        )
+        click.echo(
+            f"List of linked benchmarks: {json.dumps(response.get('data').get('current'), indent=4)}"
+        )
+
+        return response.get("data")
+
+
+@click.command("update")
+@click.argument("model_output_id")
+@click.argument("exp_id")
+@click.argument("benchmark_ids", default="", callback=_parse_csv)
+def model_output_benchmarks_replace(
+    model_output_id: str, exp_id: str, benchmark_ids: str
+):
+    """
+    Change benchmarks associated with Model output and Experiment.
+
+    Parameters
+    ----------
+    model_output_id : str
+        Model output ID
+    exp_id : str
+        Experiment ID
+    benchmarks : list[str]
+        List of benchmarks IDs to fully replace existing
+    """
+    client = _get_client()
+    _ = _call(
+        client.model_output_benchmarks_replace,
+        model_id=model_output_id,
+        exp_id=exp_id,
+        updated_benchmarks=benchmark_ids,
+    )
+
+    if client.success():
+        click.echo("Benchmark updated")
+
+
+@click.command("update")
+@click.argument("model_output_id")
+@click.argument("exp_ids", default="", callback=_parse_csv)
+def model_output_experiments_extend(model_output_id: str, exp_ids: list[str]):
+    """
+    Extend existing set of experiment associations.
+
+    Parameters
+    ----------
+    model_output_id : str
+        Model output ID
+
+    experiments : list[str]
+        List of experiment IDs
+    """
+    client = _get_client()
+    _ = _call(
+        client.model_output_experiments_extend,
+        model_id=model_output_id,
+        updated_experiments=exp_ids,
+    )
+
+    if client.success():
+        click.echo("Experiments updated")
+
+
+@click.command("delete")
+@click.argument("model_output_id")
+@click.argument("exp_id")
+def model_output_experiment_delete(model_output_id: str, exp_id: str):
+    """Delete specific experiment associated with model output
+
+    Parameters
+    ----------
+    model_output_id : str
+        Model output ID
+
+    experiment : str
+        Experiment IDs
+    """
+    client = _get_client()
+    _ = _call(
+        client.model_output_experiment_delete, model_id=model_output_id, exp_id=exp_id
+    )
+
+    if client.success():
+        click.echo(f"Experiment ID: {exp_id} deleted")
+
+
+@click.command("delete")
+@click.argument("model_id")
+def model_output_delete(model_id: str):
+    """
+    Remove model output entity
+
+    Parameters
+    ----------
+    model_id : str
+        Model Output ID.
+
+    Prints the status of the operation.
+    """
+    client = _get_client()
+
+    response = _call(client.model_output_delete, model_id=model_id)
+
+    if client.success():
         if mcu.is_dev_mode():
-            click.echo(f"Model Output: {json.dumps(model_output_data, indent=4)}")
+            click.echo(f"Delete: {json.dumps(response, indent=4)}")
         else:
-            click.echo(f"Model Output ID: {model_output_id}")
-            click.echo(f"Model Output Name: {name}")
+            click.echo(f"Operation status: {response.get('status')}")
 
 
 @click.command("status")
@@ -365,6 +659,16 @@ def cli_model_output():
     pass
 
 
+@click.group("benchmark", help="Model output benchmark commands.")
+def cli_model_benchmark():
+    pass
+
+
+@click.group("experiment", help="Model output experiment commands.")
+def cli_model_experiments():
+    pass
+
+
 # Add file commands
 cli_file.add_command(file_list)
 cli_file.add_command(file_upload)
@@ -381,6 +685,16 @@ cli_analysis.add_command(analysis_status)
 # Add output command
 cli_model_output.add_command(create_new_model_output)
 cli_model_output.add_command(model_output_query)
+cli_model_output.add_command(model_output_update)
+cli_model_output.add_command(model_output_delete)
+
+# Benchmarks command
+cli_model_benchmark.add_command(model_output_benchmarks_list)
+cli_model_benchmark.add_command(model_output_benchmarks_replace)
+
+# Experiments command
+cli_model_experiments.add_command(model_output_experiments_extend)
+cli_model_experiments.add_command(model_output_experiment_delete)
 
 # Add subparsers to the master
 cli.add_command(cli_endpoints)
@@ -388,6 +702,8 @@ cli.add_command(cli_file)
 cli.add_command(cli_analysis)
 cli.add_command(initialise)
 cli.add_command(cli_model_output)
+cli.add_command(cli_model_benchmark)
+cli.add_command(cli_model_experiments)
 
 
 if __name__ == "__main__":

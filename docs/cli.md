@@ -126,6 +126,44 @@ This command will print the `id` and `name` of the modeloutput. If developer mod
 }
 ```
 
+### model output update
+
+Update specific fields for an existing model output ID
+
+```shell
+meorg output update [OPTIONS] $MODEL_OUTPUT_ID
+```
+
+Some of the available options as flags are:
+
+```shell
+  --name 
+  --model-profile-id
+  --state-selection
+  --parameter-selection
+  --comments
+  --is-bundle
+  --benchmarks
+```
+
+
+This command will print the `id` for the updated copy of modeloutput. If developer mode is enabled, print the JSON representation for the data section of the response. An example model output data response would be:
+
+```json
+{
+    "id": "MnCj3tMzGx3NsuzwS",
+    "created": false,
+}
+```
+
+### model output delete
+
+Remove a model output entity
+
+```shell
+meorg output delete $MODEL_OUTPUT_ID
+```
+
 ### analysis status
 
 To query the status of an analysis, execute the following command:

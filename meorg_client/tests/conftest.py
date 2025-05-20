@@ -1,36 +1,29 @@
+from typing import Dict
 import os
 import pytest
+from pytest import StashKey, CollectReport
+
+phase_report_key = StashKey[Dict[str, CollectReport]]()
 
 # Set dev mode
 os.environ["MEORG_DEV_MODE"] = "1"
 
 
-class ValueStorage:
-    def __init__(self):
-        self.data = dict()
+# https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
+@pytest.hookimpl(wrapper=True, tryfirst=True)
+def pytest_runtest_makereport(item, call):
+    """Have more information on the status for pytests.
 
-    def get(self, key):
-        return self.data.get(key, None)
+    The results can be used within fixtures
+    """
+    # execute all other hooks to obtain the report object
+    rep = yield
 
-    def set(self, key, value):
-        self.data[key] = value
+    # store test results for each phase of a call, which can
+    # be "setup", "call", "teardown"
+    item.stash.setdefault(phase_report_key, {})[rep.when] = rep
 
-    def __repr__(self):
-        lines = ""
-        for k, v in self.data.items():
-            lines += f"{k} = {v}\n"
-
-        return lines
-
-
-# Add some things to the store
-store = ValueStorage()
-store.set("email", os.environ.get("MEORG_EMAIL"))
-store.set("password", os.environ.get("MEORG_PASSWORD"))
-store.set("model_output_id", os.environ.get("MEORG_MODEL_OUTPUT_ID"))
-store.set("experiment_id", os.environ.get("MEORG_EXPERIMENT_ID"))
-store.set("model_profile_id", os.environ.get("MEORG_MODEL_PROFILE_ID"))
-store.set("model_output_name", os.environ.get("MEORG_MODEL_OUTPUT_NAME"))
+    return rep
 
 
 @pytest.fixture

@@ -433,7 +433,9 @@ class Client:
 
         return responses
 
-    def start_analysis(self, id: str) -> Union[dict, requests.Response]:
+    def start_analysis(
+        self, model_output_id: str, experiment_id: str
+    ) -> Union[dict, requests.Response]:
         """Start the analysis chain.
 
         Parameters
@@ -449,11 +451,11 @@ class Client:
         return self._make_request(
             method=mcc.HTTP_PUT,
             endpoint=endpoints.ANALYSIS_START,
-            url_path_fields=dict(id=id),
+            url_path_fields=dict(id=model_output_id, expid=experiment_id),
         )
 
     def model_output_create(
-        self, mod_prof_id: str, exp_id: str, name: str
+        self, mod_prof_id: str, name: str, **config_params
     ) -> Union[dict, requests.Response]:
         """
         Create a new model output entity
@@ -474,7 +476,7 @@ class Client:
         return self._make_request(
             method=mcc.HTTP_POST,
             endpoint=endpoints.MODEL_OUTPUT_CREATE,
-            data=dict(experiment=exp_id, model=mod_prof_id, name=name),
+            data=dict(model=mod_prof_id, name=name) | config_params,
         )
 
     def model_output_query(self, model_id: str) -> Union[dict, requests.Response]:
@@ -494,6 +496,123 @@ class Client:
             method=mcc.HTTP_GET,
             endpoint=endpoints.MODEL_OUTPUT_QUERY,
             url_params=dict(id=model_id),
+        )
+
+    def model_output_update(
+        self, model_id: str, updated_fields: dict
+    ) -> Union[dict, requests.Response]:
+        """
+        Update specific fields of an existing model output.
+        Parameters
+        ----------
+        model_id : str
+            Model Output ID
+
+        params : dict
+            Request body containing necessary fields to be updated
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method=mcc.HTTP_PATCH,
+            endpoint=endpoints.MODEL_OUTPUT_UPDATE,
+            url_path_fields=dict(id=model_id),
+            json=updated_fields,
+        )
+
+    def model_output_benchmarks_list(
+        self, model_id: str, exp_id: str
+    ) -> Union[dict, requests.Response]:
+        return self._make_request(
+            method=mcc.HTTP_GET,
+            endpoint=endpoints.MODEL_OUTPUT_BENCHMARKS,
+            url_path_fields=dict(id=model_id, expId=exp_id),
+        )
+
+    def model_output_benchmarks_replace(
+        self, model_id: str, exp_id: str, updated_benchmarks: list[str]
+    ) -> Union[dict, requests.Response]:
+        """
+        Replace benchmarks.
+        Parameters
+        ----------
+        model_id : str
+            Model Output ID
+
+        exp_id: str
+            Experiment ID
+
+        updated_benchmarks:
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method=mcc.HTTP_PATCH,
+            endpoint=endpoints.MODEL_OUTPUT_BENCHMARKS,
+            url_path_fields=dict(id=model_id, expId=exp_id),
+            json=dict(benchmarks=updated_benchmarks),
+        )
+
+    def model_output_experiments_extend(
+        self, model_id: str, updated_experiments: list[str]
+    ) -> Union[dict, requests.Response]:
+        """
+        Add experiments.
+        Parameters
+        ----------
+        model_id : str
+            Model Output ID
+
+        exp_id: str
+            Experiment ID
+
+        updated_benchmarks:
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method=mcc.HTTP_PATCH,
+            endpoint=endpoints.MODEL_OUTPUT_EXPERIMENTS,
+            url_path_fields=dict(id=model_id),
+            json=dict(experiments=updated_experiments),
+        )
+
+    def model_output_experiment_delete(
+        self, model_id: str, exp_id: str
+    ) -> Union[dict, requests.Response]:
+        return self._make_request(
+            method=mcc.HTTP_DELETE,
+            endpoint=endpoints.MODEL_OUTPUT_EXPERIMENTS,
+            url_path_fields=dict(id=model_id),
+            json=dict(experiment=exp_id),
+        )
+
+    def model_output_delete(self, model_id: str) -> Union[dict, requests.Response]:
+        """
+        Remove specific new model output entity
+        Parameters
+        ----------
+        model_id : str
+            Model Output ID
+
+        Returns
+        -------
+        Union[dict, requests.Response]
+            Response from ME.org.
+        """
+        return self._make_request(
+            method=mcc.HTTP_DELETE,
+            endpoint=endpoints.MODEL_OUTPUT_DELETE,
+            url_path_fields=dict(id=model_id),
         )
 
     def get_analysis_status(self, id: str) -> Union[dict, requests.Response]:

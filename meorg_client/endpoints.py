@@ -14,9 +14,15 @@ FILE_DELETE = "modeloutput/{id}/files/{fileId}"
 FILE_STATUS = "files/status/{id}"
 
 # Analysis
-ANALYSIS_START = "modeloutput/{id}/start"
+ANALYSIS_START = "modeloutput/{id}/{expid}/start"
 ANALYSIS_STATUS = "analysis/{id}/status"
 
 # Model Outputs
 MODEL_OUTPUT_CREATE = "modeloutput"
 MODEL_OUTPUT_QUERY = MODEL_OUTPUT_CREATE
+
+MODEL_OUTPUT_UPDATE = "modeloutput/{id}"
+MODEL_OUTPUT_DELETE = MODEL_OUTPUT_UPDATE
+
+MODEL_OUTPUT_BENCHMARKS = "modeloutput/{id}/{expId}/available-benchmarks"
+MODEL_OUTPUT_EXPERIMENTS = "modeloutput/{id}/available-experiments"
