@@ -4,9 +4,8 @@ import os
 import pytest
 from meorg_client.client import Client
 import meorg_client.utilities as mu
-from conftest import store
 import tempfile as tf
-import time
+from conftest import phase_report_key
 
 
 def _get_authenticated_client() -> Client:
@@ -37,19 +36,7 @@ def _get_authenticated_client() -> Client:
     return client
 
 
-@pytest.fixture
-def model_output_id() -> str:
-    """Get the model output ID.
-
-    Returns
-    -------
-    str
-        Model output ID.
-    """
-    return os.environ.get("MEORG_MODEL_OUTPUT_ID")
-
-
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client() -> Client:
     """Get an authenticated client.
 
@@ -93,28 +80,184 @@ def test_list_endpoints(client: Client):
     assert isinstance(response, dict)
 
 
-def test_create_model_output(
-    client: Client, model_profile_id: str, experiment_id: str, model_output_name: str
+@pytest.fixture
+def model_output_generator(request, client: Client, model_profile_id: str):
+    """A generator function for creating new model outputs before running a test.
+
+       After the test has run, automatically deletes all model outputs created within
+       the test
+
+    Parameters
+    -------
+    request:
+        Request object by pytest
+
+    client : Client
+        Client.
+
+    model_profile_id
+        Model profile ID.
+    """
+    model_output_ids = []
+
+    def _make_model_output(model_output_name):
+        """Create new model output ID.
+
+        Parameters
+        -------
+        name:
+            Model output name
+        """
+        # `model_profile_id` from `model_output_generator`
+        response = client.model_output_create(model_profile_id, model_output_name)
+        model_output_id = response.get("data").get("modeloutput")
+        model_output_ids.append(model_output_id)
+        return model_output_id
+
+    yield _make_model_output
+
+    # If using tests like model_output_delete, where model output is already deleted,
+    # we don't want to do the teardown process
+    if hasattr(request.node, "skip_teardown"):
+        return
+
+    # If test failed, for debugging purposes, we want to keep the model output in
+    # me.org
+    report = request.node.stash[phase_report_key]
+    if report["call"].failed:
+        print("Call to test failed", request.node.nodeid)
+        return
+
+    for model_output_id in model_output_ids:
+        client.model_output_delete(model_output_id)
+
+
+@pytest.fixture
+def model_output_id(model_output_generator: str):
+    """Generate fresh model output ID.
+
+    Parameters
+    ----------
+    model_output_generator: str
+        Model output generator function
+    """
+    return model_output_generator("base_model_output")
+
+
+class TestModelOutput:
+
+    def test_create_model_output(
+        self, client: Client, model_profile_id: str, model_output_name: str
+    ):
+        """Test Creation of Model output."""
+        response = client.model_output_create(model_profile_id, model_output_name)
+        assert client.success()
+
+        model_output_id = response.get("data").get("modeloutput")
+        assert model_output_id is not None
+
+        self.test_model_output_query(client, model_output_id)
+
+    def test_model_output_query(self, client: Client, model_output_id: str):
+        """Test Existing Model output."""
+        response = client.model_output_query(model_output_id)
+        assert client.success()
+
+        response_model_output_data = response.get("data").get("modeloutput")
+        assert response_model_output_data.get("id") == model_output_id
+
+    def test_model_output_update(
+        self,
+        client: Client,
+        model_output_id: str,
+        model_profile_id: str,
+    ):
+        """Test updation of model output."""
+
+        update_data = {
+            "name": "updated_mo_name",
+            "model": model_profile_id,
+            "state_selection": "default model initialisation",
+            "parameter_selection": "automated calibration",
+            "comments": "updated model output pytest",
+            "is_bundle": False,
+        }
+        _ = client.model_output_update(model_output_id, update_data)
+        assert client.success()
+
+    def test_model_output_delete(self, request, client: Client, model_output_id: str):
+        request.node.skip_teardown = True
+        _ = client.model_output_delete(model_output_id)
+        assert client.success()
+
+
+class TestBenchmark:
+
+    # This model_output_id will always have multiple benchmarks
+    @pytest.fixture
+    def model_output_id(
+        self, client: Client, model_output_generator, experiment_id: str
+    ):
+        latest_id = None
+        for i in range(2):
+            latest_id = model_output_generator(f"meorg_test_benchmark{i}")
+            client.model_output_experiments_extend(latest_id, [experiment_id])
+        return latest_id
+
+    def _check_available_benchmarks(self, response, expected):
+        available_benchmarks = response.get("data").get("benchmarks")
+        assert isinstance(available_benchmarks, list)
+        assert len(available_benchmarks) == expected
+        return available_benchmarks
+
+    def _check_current_benchmarks(self, response, expected):
+        current_benchmarks = response.get("data").get("current")
+        assert isinstance(current_benchmarks, list)
+        assert len(current_benchmarks) == expected
+        return current_benchmarks
+
+    def test_model_output_benchmarks_list(
+        self, client: Client, model_output_id: str, experiment_id: str
+    ):
+
+        response = client.model_output_benchmarks_list(model_output_id, experiment_id)
+        self._check_available_benchmarks(response, 1)
+        self._check_current_benchmarks(response, 0)
+        assert client.success()
+
+    def test_model_output_benchmarks_replace(
+        self, client: Client, model_output_id: str, experiment_id: str
+    ):
+        response = client.model_output_benchmarks_list(model_output_id, experiment_id)
+        available_benchmarks = self._check_available_benchmarks(response, 1)
+        self._check_current_benchmarks(response, 0)
+
+        client.model_output_benchmarks_replace(
+            model_output_id,
+            experiment_id,
+            [available_benchmarks[0]["id"]],
+        )
+        assert client.success()
+
+        response = client.model_output_benchmarks_list(model_output_id, experiment_id)
+        self._check_available_benchmarks(response, 0)
+        self._check_current_benchmarks(response, 1)
+
+
+def test_model_output_experiments_extend(
+    client: Client, model_output_id: str, experiment_id: str
 ):
-    """Test Creation of Model output."""
-    response = client.model_output_create(
-        model_profile_id, experiment_id, model_output_name
-    )
+    client.model_output_experiments_extend(model_output_id, [experiment_id])
     assert client.success()
 
-    model_output_id = response.get("data").get("modeloutput")
-    assert model_output_id is not None
 
-    test_model_output_query(client, model_output_id)
-
-
-def test_model_output_query(client: Client, model_output_id: str):
-    """Test Existing Model output."""
-    response = client.model_output_query(model_output_id)
+def test_model_output_experiment_delete(
+    client: Client, model_output_id: str, experiment_id: str
+):
+    # For now, since fresh model output id
+    client.model_output_experiments_extend(model_output_id, [experiment_id])
+    client.model_output_experiment_delete(model_output_id, experiment_id)
     assert client.success()
-
-    response_model_output_data = response.get("data").get("modeloutput")
-    assert response_model_output_data.get("id") == model_output_id
 
 
 def test_upload_file(client: Client, test_filepath: str, model_output_id: str):
@@ -134,9 +277,6 @@ def test_upload_file(client: Client, test_filepath: str, model_output_id: str):
 
     # Make sure it worked
     assert client.success()
-
-    # Store the response.
-    store.set("file_upload", response)
 
 
 def test_upload_file_multiple(client: Client, test_filepath: str, model_output_id: str):
@@ -159,9 +299,6 @@ def test_upload_file_multiple(client: Client, test_filepath: str, model_output_i
         [response.get("data").get("files")[0].get("id") for response in responses]
     )
 
-    # Store the response.
-    store.set("file_upload_multiple", responses)
-
 
 def test_file_list(client: Client, model_output_id: str):
     """Test the listing of files for a model output.
@@ -176,40 +313,55 @@ def test_file_list(client: Client, model_output_id: str):
     response = client.list_files(model_output_id)
     assert client.success()
     assert isinstance(response.get("data").get("files"), list)
-    store.set("file_list", response)
 
 
-def test_start_analysis(client: Client, model_output_id: str):
-    """Test starting an analysis.
+class TestAnalysis:
 
-    Parameters
-    ----------
-    client : Client
-        Client.
-    model_output_id : str
-        Model output ID.
-    """
-    # Wait 5s for data to move from cache to store (otherwise analysis will fail, still might)
-    time.sleep(5)
-    response = client.start_analysis(model_output_id)
-    assert client.success()
+    @pytest.fixture
+    def model_output_id_analysis(
+        self,
+        client: Client,
+        test_filepath: str,
+        experiment_id: str,
+        model_output_generator,
+    ):
+        model_output_id = model_output_generator("meorg_test_analysis")
+        client.model_output_experiments_extend(model_output_id, [experiment_id])
+        client.upload_files([test_filepath, test_filepath], model_output_id)
+        return model_output_id
 
-    # Store result for status check below
-    store.set("start_analysis", response)
+    @pytest.fixture
+    def analysis_id(
+        self, client: Client, model_output_id_analysis: str, experiment_id: str
+    ):
+        response = client.start_analysis(model_output_id_analysis, experiment_id)
+        return response.get("data").get("analysisId")
 
+    def test_start_analysis(
+        self, client: Client, model_output_id_analysis: str, experiment_id: str
+    ):
+        """Test starting an analysis.
 
-def test_get_analysis_status(client: Client):
-    """Test getting the analysis status.
+        Parameters
+        ----------
+        client : Client
+            Client.
+        model_output_id : str
+            Model output ID.
+        """
+        _ = client.start_analysis(model_output_id_analysis, experiment_id)
+        assert client.success()
 
-    Parameters
-    ----------
-    client : Client
-        Client.
-    """
-    # Get the analysis id from the store
-    analysis_id = store.get("start_analysis").get("data").get("analysisId")
-    _ = client.get_analysis_status(analysis_id)
-    assert client.success()
+    def test_get_analysis_status(self, client: Client, analysis_id: str):
+        """Test getting the analysis status.
+
+        Parameters
+        ----------
+        client : Client
+            Client.
+        """
+        _ = client.get_analysis_status(analysis_id)
+        assert client.success()
 
 
 @pytest.mark.xfail(strict=False)
@@ -292,7 +444,9 @@ def test_upload_file_parallel_no_progress(
     )
 
 
-def test_delete_file_from_model_output(client: Client, model_output_id: str):
+def test_delete_file_from_model_output(
+    client: Client, test_filepath: str, model_output_id: str
+):
     """Test deleting a file from a model output.
 
     Parameters
@@ -302,12 +456,13 @@ def test_delete_file_from_model_output(client: Client, model_output_id: str):
     model_output_id : str
         Model output ID.
     """
+    file_upload = client.upload_files(test_filepath, id=model_output_id)[0]
 
     # Retrieve the uploaded file ID from earlier.
-    file_id = store.get("file_upload").get("data").get("files")[0].get("id")
+    file_id = file_upload.get("data").get("files")[0].get("id")
 
     # Retieve the file list from earlier.
-    files = store.get("file_list")
+    files = client.list_files(model_output_id)
 
     # Convert to a list of JUST the IDs, none of the extra attributes.
     file_ids = [f.get("id") for f in files.get("data").get("files")]
@@ -328,7 +483,9 @@ def test_delete_file_from_model_output(client: Client, model_output_id: str):
     assert file_id not in file_ids
 
 
-def test_delete_all_files_from_model_output(client: Client, model_output_id: str):
+def test_delete_all_files_from_model_output(
+    client: Client, test_filepath: str, model_output_id: str
+):
     """Test deleting all files from a model output.
 
     Parameters
@@ -339,8 +496,11 @@ def test_delete_all_files_from_model_output(client: Client, model_output_id: str
         Model output ID.
     """
 
+    # Upload a list of files
+    client.upload_files([test_filepath, test_filepath], model_output_id)
+
     # Get the list of files and unpack to list
-    files = store.get("file_list")
+    files = client.list_files(model_output_id)
     file_ids = [f.get("id") for f in files.get("data").get("files")]
 
     # Make sure the list is more than 2 items long.
