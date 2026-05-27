@@ -325,8 +325,9 @@ def create_new_model_output(
 
 
 @click.command("query")
-@click.argument("model_id")
-def model_output_query(model_id: str):
+@click.option("--name", required=False, help="Name of model output entity.")
+@click.argument("model_id", required=False)
+def model_output_query(model_id: str, name: str):
     """
     Get details for a specific new model output entity
 
@@ -334,13 +335,17 @@ def model_output_query(model_id: str):
     ----------
     model_id : str
         Model Output ID.
-
+    name : str
+        Name of model output entity.
 
     Prints the `id` modeloutput, and JSON representation for the remaining metadata if in dev mode.
     """
     client = _get_client()
 
-    response = _call(client.model_output_query, model_id=model_id)
+    if name:
+        response = _call(client.model_output_query, name=name)
+    else:
+        response = _call(client.model_output_query, model_id=model_id)
 
     if client.success():
 
