@@ -476,7 +476,7 @@ class Client:
         return self._make_request(
             method=mcc.HTTP_POST,
             endpoint=endpoints.MODEL_OUTPUT_CREATE,
-            data=dict(model=mod_prof_id, name=name) | config_params,
+            json=dict(model=mod_prof_id, name=name) | config_params,
         )
 
     def model_output_query(self, model_id: str) -> Union[dict, requests.Response]:
