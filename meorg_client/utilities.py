@@ -6,6 +6,8 @@ import yaml
 import os
 from pathlib import Path
 from importlib import resources
+from . import _version
+import platform
 
 
 # Single argument decoding functions.
@@ -105,3 +107,23 @@ def get_uploaded_file_ids(response):
 
 def is_dev_mode():
     return os.getenv("MEORG_DEV_MODE", "0") == "1"
+
+
+def get_user_agent() -> str:
+    """Return the client's user agent to send along with the request.
+
+    Returns
+    -------
+    str
+        User agent.
+    """
+    template = "{product}/{product_version} ({system_information})"
+    system_information = f"{platform.system()} {platform.machine()}"
+
+    directives = dict(
+        product="meorg_client",
+        product_version=_version.get_versions()["version"],
+        system_information=system_information,
+    )
+
+    return template.format(**directives)

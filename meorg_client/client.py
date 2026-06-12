@@ -112,6 +112,9 @@ class Client:
         # Assemble the headers
         _headers = self._merge_headers(headers)
 
+        # Attach the user agent
+        _headers['user-agent'] = mu.get_user_agent()
+
         # Make the request, set it as the last response for future use
         self.last_response = func(
             url, data=data, json=json, headers=_headers, files=files, **kwargs
