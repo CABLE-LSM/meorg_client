@@ -324,7 +324,7 @@ def create_new_model_output(
     return model_output_id
 
 
-@click.command("query")
+@click.command("query", no_args_is_help=True)
 @click.option("--name", required=False, help="Name of model output entity.")
 @click.argument("model_id", required=False)
 def model_output_query(model_id: str, name: str):
