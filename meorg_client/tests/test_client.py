@@ -156,15 +156,21 @@ class TestModelOutput:
         model_output_id = response.get("data").get("modeloutput")
         assert model_output_id is not None
 
-        self.test_model_output_query(client, model_output_id)
-
-    def test_model_output_query(self, client: Client, model_output_id: str):
+    def test_model_output_query(self, client: Client, model_output_name: str, model_output_generator):
         """Test Existing Model output."""
-        response = client.model_output_query(model_output_id)
+
+        id = model_output_generator(model_output_name)
+        response = client.model_output_query(model_id=id)
         assert client.success()
 
         response_model_output_data = response.get("data").get("modeloutput")
-        assert response_model_output_data.get("id") == model_output_id
+        assert response_model_output_data.get("id") == id
+
+        response = client.model_output_query(model_output_name, name=model_output_name)
+        assert client.success()
+
+        response_model_output_data = response.get("data").get("modeloutput")
+        assert response_model_output_data.get("id") == id
 
     def test_model_output_update(
         self,
