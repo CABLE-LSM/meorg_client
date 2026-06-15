@@ -482,7 +482,7 @@ class Client:
             json=dict(model=mod_prof_id, name=name) | config_params,
         )
 
-    def model_output_query(self, model_id: str) -> Union[dict, requests.Response]:
+    def model_output_query(self, model_id: str = None, name: bool = None) -> Union[dict, requests.Response]:
         """
         Get details for a specific new model output entity
         Parameters
@@ -498,7 +498,7 @@ class Client:
         return self._make_request(
             method=mcc.HTTP_GET,
             endpoint=endpoints.MODEL_OUTPUT_QUERY,
-            url_params=dict(id=model_id),
+            url_params=dict(name=name) if name else dict(id=model_id),
         )
 
     def model_output_update(
