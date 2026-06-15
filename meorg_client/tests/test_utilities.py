@@ -26,3 +26,8 @@ def test_load_package_data():
     """Test load_package_data."""
     result = mu.load_package_data("openapi.json")
     assert isinstance(result, dict)
+
+
+def test_get_user_agent():
+    """Test get_user_agent."""
+    assert "meorg_client/" in mu.get_user_agent()
