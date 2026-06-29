@@ -1,43 +1,12 @@
-name: Conda Publish
+name: Publish python package.
 
 on:
   release:
     types: [released]
 
 jobs:
-  conda_deployment:
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          python-version: '3.9'
-          environment-file: .conda/build_env.yaml
-          auto-update-conda: false
-          auto-activate-base: false
-          show-channel-urls: true
-      - name: Enforce .tar.bz2 packages
-        # Temporary work-arounds while the action uibcdf/action-build-and-upload-conda-packages gets updated:
-        # We create a `~/.condarc` file with the correct options to enforce the use of `.tar.bz2` packages
-        # and we set the channels to be used by conda build
-        shell: bash
-        run: |
-            cat > ~/.condarc << EOF
-            conda-build:
-                pkg_format: .tar.bz2
-            channels:
-                - accessnri
-                - conda-forge
-                - coecms
-                - nodefaults
-            EOF
-      - name: Build and upload the conda packages
-        uses: uibcdf/action-build-and-upload-conda-packages@v1.4.0
-        with:
-          python-version: '3.9'
-          meta_yaml_dir: .conda
-          user: ${{ secrets.ANACONDA_USER }}
-          label: main
-          token: ${{ secrets.ANACONDA_TOKEN }}
+  publish_python_package:
+    uses: access-nri/actions/.github/workflows/publish-python-package.yml@main
+    secrets: inherit
+    permissions:
+      actions: write
