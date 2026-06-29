@@ -12,7 +12,7 @@ mkdir -p $HOME/work
 cd $HOME/work
 
 # Clone the repo
-git clone git@github.com:CABLE-LSM/meorg_client.git
+git clone git@github.com:ACCESS-NRI/meorg_client.git
 
 # Move into it
 cd meorg_client
