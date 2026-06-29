@@ -48,6 +48,7 @@ requires = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["meorg_client*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "meorg_client.__version__"}
