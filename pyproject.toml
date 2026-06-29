@@ -32,7 +32,7 @@ authors = [
 ]
 
 [project.urls]
-source-code = "https://github.com/CABLE-LSM/meorg_client"
+source-code = "https://github.com/ACCESS-NRI/meorg_client"
 
 # CLI
 [project.scripts]
