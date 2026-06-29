@@ -5,7 +5,7 @@ Releases are generated from a stable main as needed to reflect developments and 
 Release generation is restricted to project administrators.
 
 Releasing the client involves publishing a tagged release on Github:
-1. Go to https://github.com/CABLE-LSM/meorg_client/releases/new
+1. Go to https://github.com/ACCESS-NRI/meorg_client/releases/new
 2. Under "Choose a tag", start typing a new release, following SemVer (without leading "v") and click "Create new tag X on publish".
 3. Ensure Target is set to "main".
 4. Generate release notes if applicable.
